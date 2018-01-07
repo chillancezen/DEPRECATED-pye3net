@@ -1,6 +1,9 @@
-from sqlalchemy.ext.declarative import declarative_base
+#
+#Copyright (c) 2018 Jie Zheng
+#
 from e3net.common.e3exception import e3_exception
 from e3net.db.db_base import db_sessions
+from e3net.db.db_base import DB_BASE
 from sqlalchemy import String
 from sqlalchemy import Text
 from sqlalchemy import Column
@@ -8,8 +11,6 @@ from sqlalchemy import Enum
 from uuid import uuid4
 
 DB_NAME='E3NET_VSWITCH'
-DB_BASE=declarative_base()
-
 E3VSWITCH_HOST_STATUS_UNKNOWN='unknown'
 E3VSWITCH_HOST_STATUS_ACTIVE='active'
 E3VSWITCH_HOST_STATUS_INACTIVE='inactive'
@@ -34,6 +35,7 @@ class E3VswitchHost(DB_BASE):
         ret['name']=self.name
         ret['description']=self.description
         ret['host_ip']=self.host_ip
+        ret['host_status']=self.host_status
         return str(ret)
 
 def register_e3vswitch_host(hostname,ip,desc=''):
@@ -101,7 +103,7 @@ if __name__=='__main__':
     from e3net.db.db_base import init_database
     from e3net.db.db_base import create_database_entries
     init_database(DB_NAME,'mysql+pymysql://e3net:e3credientials@localhost/E3NET_VSWITCH',False)
-    create_database_entries(DB_NAME,DB_BASE)
+    create_database_entries(DB_NAME)
     register_e3vswitch_host('my-container-host','10.0.2.15','spine vswitch host')
     register_e3vswitch_host('my-container-host1','10.0.2.16','spine vswitch host')
     #unregister_e3vswitch_host('my-container-host')
