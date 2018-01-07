@@ -40,6 +40,7 @@ if __name__=='__main__':
     import time
     print(_moid_invt)
     a=A()
+    print(isinstance(b,E3MO),b.__dict__)
     print(_moid_invt)
     time.sleep(2)
     a=None
