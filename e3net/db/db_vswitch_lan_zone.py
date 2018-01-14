@@ -1,6 +1,7 @@
 #
 #Copyright (c) 2018 Jie Zheng
 #
+from e3net.common.e3exception import e3_exception
 from e3net.db.db_base import db_sessions
 from e3net.db.db_base import DB_BASE
 from sqlalchemy import String
@@ -33,4 +34,59 @@ class E3VswitchLANZone(DB_BASE):
         ret['name']=self.name
         ret['zone_type']=self.zone_type
         return str(ret)
-    
+def register_e3vswitch_lanzone(name,zone_type=E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==name).first()
+        if lanzone:
+            lanzone.zone_type=zone_type
+        else:
+            lanzone=E3VswitchLANZone()
+            lanzone.id=str(uuid4())
+            lanzone.name=name
+            lanzone.zone_type=zone_type
+            session.add(lanzone)
+        session.commit()
+    except:
+        session.rollback()
+        raise e3_exception('make sure lan zone name is unique')
+    finally:
+        session.close()
+def list_e3vswitch_lanzones():
+    session=db_sessions[DB_NAME]()
+    lst=None
+    try:
+        session.begin()
+        lst=session.query(E3VswitchLANZone).all()
+    except:
+        lst=list()
+        session.rollback()
+    finally:
+        session.close()
+    return lst
+def get_e3vswitch_lanzone(name):
+    session=db_sessions[DB_NAME]()
+    lanzone=None
+    try:
+        session.begin()
+        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==name).first()
+    except:
+        session.rollback()
+        lanzone=None
+    finally:
+        session.close()
+    return lanzone
+def unregister_e3vswitch_lanzone(name):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==name).first()
+        if lanzone:
+            session.delete(lanzone)
+            session.commit()
+    except:
+        session.rollback()
+        raise e3_exception('lan zone can not unregistered and may it be in use')
+    finally:
+        session.close()

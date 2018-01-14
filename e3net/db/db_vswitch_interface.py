@@ -10,6 +10,7 @@ from sqlalchemy import Column
 from sqlalchemy import Enum
 from sqlalchemy import Integer
 from sqlalchemy import ForeignKey
+from sqlalchemy import and_
 from uuid import uuid4
 
 
@@ -54,7 +55,73 @@ class E3VswitchInterface(DB_BASE):
         ret['interface_type']=self.interface_type
         ret['lan_zone']=self.lan_zone
         ret['reference_count']=self.reference_count
-
+        return str(ret)
+def register_e3vswitch_interface(hostname,dev_addr,
+    lan_zone,
+    iface_status=E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
+    iface_type=E3VSWITCH_INTERFACE_TYPE_SHARED):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.hostname==hostname,
+            E3VswitchInterface.dev_address==dev_addr)).first()
+        if iface:
+            iface.interface_status=iface_status
+            iface.interface_type=iface_type
+            iface.lan_zone=lan_zone
+        else:
+            iface=E3VswitchInterface()
+            iface.id=str(uuid4())
+            iface.hostname=hostname
+            iface.dev_address=dev_addr
+            iface.lan_zone=lan_zone
+            iface.reference_count=0
+            iface.interface_status=iface_status
+            iface.interface_type=iface_type
+            session.add(iface)
+        session.commit()
+    except:
+        session.rollback()
+        raise e3_exception('invalid arguments to resgiter an interface')
+    finally:
+        session.close()
+def list_e3vswitch_interfaces():
+    session=db_sessions[DB_NAME]()
+    lst=None
+    try:
+        session.begin()
+        lst=session.query(E3VswitchInterface).all()
+    except:
+        lst=list()
+        session.rollback()
+    finally:
+        session.close()
+    return lst
+def get_e3vswitch_interface(host,dev_addr):
+    session=db_sessions[DB_NAME]()
+    iface=None
+    try:
+        session.begin()
+        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.hostname==host,E3VswitchInterface.dev_address==dev_addr)).first()
+    except:
+        iface=None
+    finally:
+        session.close()
+    return iface
+def unregister_e3vswitch_interface(host,dev_addr):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.hostname==host,E3VswitchInterface.dev_address==dev_addr)).first()
+        if iface and iface.reference_count==0:
+            session.delete(iface)
+            session.commit()
+    except:
+        session.rollback()
+        raise e3_exception('make sure interface ref count is zero')
+    finally:
+        session.close()
+                   
 if __name__=='__main__':
     from e3net.db.db_base import init_database
     from e3net.db.db_base import create_database_entries

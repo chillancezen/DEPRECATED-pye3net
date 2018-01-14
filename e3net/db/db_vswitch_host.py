@@ -59,7 +59,7 @@ def register_e3vswitch_host(hostname,ip,desc=''):
         raise e3_exception('make sure host\'s IP and hotsname are unique')
     finally:
         session.close()
-def get_e3vswicth_host(hostname):
+def get_e3vswitch_host(hostname):
     session=db_sessions[DB_NAME]()
     host=None
     try:
