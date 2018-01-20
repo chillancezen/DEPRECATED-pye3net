@@ -34,7 +34,7 @@ class E3VswitchLANZone(DB_BASE):
         ret['name']=self.name
         ret['zone_type']=self.zone_type
         return str(ret)
-def register_e3vswitch_lanzone(name,zone_type=E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER):
+def db_register_e3vswitch_lanzone(name,zone_type=E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
@@ -53,7 +53,7 @@ def register_e3vswitch_lanzone(name,zone_type=E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER):
         raise e3_exception('make sure lan zone name is unique')
     finally:
         session.close()
-def list_e3vswitch_lanzones():
+def db_list_e3vswitch_lanzones():
     session=db_sessions[DB_NAME]()
     lst=None
     try:
@@ -65,7 +65,7 @@ def list_e3vswitch_lanzones():
     finally:
         session.close()
     return lst
-def get_e3vswitch_lanzone(name):
+def db_get_e3vswitch_lanzone(name):
     session=db_sessions[DB_NAME]()
     lanzone=None
     try:
@@ -77,7 +77,7 @@ def get_e3vswitch_lanzone(name):
     finally:
         session.close()
     return lanzone
-def unregister_e3vswitch_lanzone(name):
+def db_unregister_e3vswitch_lanzone(name):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()

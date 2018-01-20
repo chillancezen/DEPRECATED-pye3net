@@ -56,7 +56,7 @@ class E3VswitchInterface(DB_BASE):
         ret['lan_zone']=self.lan_zone
         ret['reference_count']=self.reference_count
         return str(ret)
-def register_e3vswitch_interface(hostname,dev_addr,
+def db_register_e3vswitch_interface(hostname,dev_addr,
     lan_zone,
     iface_status=E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
     iface_type=E3VSWITCH_INTERFACE_TYPE_SHARED):
@@ -85,7 +85,7 @@ def register_e3vswitch_interface(hostname,dev_addr,
         raise e3_exception('invalid arguments to resgiter an interface')
     finally:
         session.close()
-def list_e3vswitch_interfaces():
+def db_list_e3vswitch_interfaces():
     session=db_sessions[DB_NAME]()
     lst=None
     try:
@@ -97,7 +97,7 @@ def list_e3vswitch_interfaces():
     finally:
         session.close()
     return lst
-def get_e3vswitch_interface(host,dev_addr):
+def db_get_e3vswitch_interface(host,dev_addr):
     session=db_sessions[DB_NAME]()
     iface=None
     try:
@@ -108,7 +108,7 @@ def get_e3vswitch_interface(host,dev_addr):
     finally:
         session.close()
     return iface
-def unregister_e3vswitch_interface(host,dev_addr):
+def db_unregister_e3vswitch_interface(host,dev_addr):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()

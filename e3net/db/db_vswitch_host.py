@@ -9,6 +9,10 @@ from sqlalchemy import Text
 from sqlalchemy import Column
 from sqlalchemy import Enum
 from uuid import uuid4
+from e3net.common.e3log import get_e3loger
+import traceback 
+
+e3loger=get_e3loger('e3vswitch_controller')
 
 DB_NAME='E3NET_VSWITCH'
 E3VSWITCH_HOST_STATUS_UNKNOWN='unknown'
@@ -38,7 +42,7 @@ class E3VswitchHost(DB_BASE):
         ret['host_status']=self.host_status
         return str(ret)
 
-def register_e3vswitch_host(hostname,ip,desc=''):
+def db_register_e3vswitch_host(hostname,ip,desc=''):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
@@ -54,17 +58,19 @@ def register_e3vswitch_host(hostname,ip,desc=''):
             host.host_ip=ip
             session.add(host)
         session.commit()
+        e3loger.info('register/update E3VswitchHost:%s'%(str(host)))
     except:
         session.rollback()
         raise e3_exception('make sure host\'s IP and hotsname are unique')
     finally:
         session.close()
-def get_e3vswitch_host(hostname):
+def db_get_e3vswitch_host(hostname):
     session=db_sessions[DB_NAME]()
     host=None
     try:
         session.begin()
         host=session.query(E3VswitchHost).filter(E3VswitchHost.name==hostname).first()
+        e3loger.debug('retrieve E3VswitchHost:%s'%(str(host)))
     except:
         host=None
         session.rollback()
@@ -72,7 +78,7 @@ def get_e3vswitch_host(hostname):
         session.close()
     return host
 
-def list_e3vswitch_hosts():
+def db_list_e3vswitch_hosts():
     session=db_sessions[DB_NAME]()
     lst=None
     try:
@@ -85,7 +91,7 @@ def list_e3vswitch_hosts():
         session.close()
     return lst
 
-def unregister_e3vswitch_host(hostname):
+def db_unregister_e3vswitch_host(hostname):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
@@ -104,13 +110,13 @@ if __name__=='__main__':
     from e3net.db.db_base import create_database_entries
     init_database(DB_NAME,'mysql+pymysql://e3net:e3credientials@localhost/E3NET_VSWITCH',False)
     create_database_entries(DB_NAME)
-    register_e3vswitch_host('my-container-host','10.0.2.15','spine vswitch host')
-    register_e3vswitch_host('my-container-host1','10.0.2.16','spine vswitch host')
-    #unregister_e3vswitch_host('my-container-host')
+    db_register_e3vswitch_host('my-container-host','10.0.2.15','spine vswitch host')
+    db_register_e3vswitch_host('my-container-host1','10.0.2.16','spine vswitch host')
+    db_unregister_e3vswitch_host('my-container-host')
     #unregister_e3vswitch_host('my-container-host2')
     #print(get_e3vswicth_host('my-container-host'))
-    #print(get_e3vswicth_host('my-container-host1'))
+    print(db_get_e3vswitch_host('my-container-host1'))
     #print(get_e3vswicth_host('my-container-host2'))
-    for i in list_e3vswitch_hosts():
+    for i in db_list_e3vswitch_hosts():
         print(i)
     

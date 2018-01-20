@@ -46,7 +46,7 @@ class root_entry():
     #set the root_key:leaf_key:to leaf
     #this requires two tiers of LOCKs
     #
-    def set(self,root_key,leaf_key,val):
+    def set(self,root_key,leaf_key,val,invalid=True):
         sub=self._get_sub_entry_locked(root_key)
         if not sub:
             self._set_sub_entry(root_key)
@@ -56,17 +56,20 @@ class root_entry():
             sub._set_entry(leaf_key)
             leaf=sub._get_entry_locked(leaf_key)
         leaf._set(val)
+        if not invalid:
+            leaf._invalidate()
 
     #
     #read lock acquired
+    #<value,isExisting> tuple is returned
     #
     def get(self,root_key,leaf_key):
         sub=self._get_sub_entry_locked(root_key)
         if sub:
             leaf=sub._get_entry_locked(leaf_key)
-            if leaf and leaf.is_valid is True:
-                return leaf.obj
-        return None
+            if leaf:
+                return leaf._get()
+        return None,False
 
     #
     #tier1 lock is not acquired
@@ -137,32 +140,47 @@ class sub_entry():
 
 class leaf_entry():
     def __init__(self):
+        self.guard=e3rwlock()
         self.is_valid=False
         self.obj=None
 
     def _invalidate(self):
+        self.guard.write_lock()
         self.is_valid=False
         self.obj=None
+        self.guard.write_unlock()
 
     def _set(self,obj):
+        self.guard.write_lock()
         self.obj=obj
         self.is_valid=True
+        self.guard.write_unlock()
+    def _get(self):
+        obj=None
+        valid=False
+        self.guard.read_lock()
+        if self.is_valid is True:
+            obj=self.obj
+            valid=True
+        self.guard.read_unlock()
+        return obj,valid
 
-   
-root=root_entry()
+root_keeper=root_entry()
 
 if __name__=='__main__':
+    root=root_entry()
+    root.set('foo','self',123,False)
     for i in range(10):
         root.set('foo','bar%d'%(i),i)
     print(root.list('foo'))
     root.invalidate('foo','bar%d'%(4))
-    for i in range(10):
-        print(root.get('foo','bar%d'%(i)))
+    for sub_key in root.list('foo'):
+        print(sub_key,':',root.get('foo',sub_key))
     print(root.get('foo','bar%d'%(10)))
-    #root.set('foo','bar',123)
-    #root.invalidate('foo','bar')
-    #root.set('foo','bar1',1234)
+    root.set('foo','bar',123)
+    root.invalidate('foo','bar')
+    root.set('foo','bar1',1234)
     #root.unset('foo','bar')
-    #print(root.list('foo1'))
-    #print(root.get_locked('foo','bar')) 
-    #print(root)
+    print(root.list('foo1'))
+    print(root.get('foo','bar')) 
+    print(root.list('foo'))
