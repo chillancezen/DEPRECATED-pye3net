@@ -29,6 +29,8 @@ class e3rwlock(Structure):
     def read_unlock(self):
         return _clib.pthread_rwlock_unlock(byref(self))
 
+    def __del__(self):
+        return _clib.pthread_rwlock_destroy(byref(self))
 if __name__=='__main__':
     l=e3rwlock()
     l.read_lock()
@@ -40,6 +42,6 @@ if __name__=='__main__':
     l.write_unlock()
  
     l.read_lock()
-    #l.read_unlock()
+    l.read_unlock()
     l.write_lock()
     l.write_unlock()

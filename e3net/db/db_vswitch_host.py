@@ -101,7 +101,7 @@ def db_unregister_e3vswitch_host(hostname):
             session.commit()
     except:
         session.rollback()
-        raise e3_exception('host does not being in use by other entrities')
+        raise e3_exception('host must not be in use by other entrities')
     finally:
         session.close()
 

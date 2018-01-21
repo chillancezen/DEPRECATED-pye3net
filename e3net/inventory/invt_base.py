@@ -26,6 +26,25 @@ dispatching_for_retrieval={
     'vswitch_interface':db_get_e3vswitch_interface,
     'vswitch_lan_zone':db_get_e3vswitch_lanzone
 }
+
+from e3net.db.db_vswitch_host import db_unregister_e3vswitch_host
+from e3net.db.db_vswitch_interface import db_unregister_e3vswitch_interface
+from e3net.db.db_vswitch_lan_zone import db_unregister_e3vswitch_lanzone
+dispatching_for_deletion={
+    'vswitch_host':db_unregister_e3vswitch_host,
+    'vswitch_interface':db_unregister_e3vswitch_interface,
+    'vswitch_lan_zone':db_unregister_e3vswitch_lanzone,
+}
+sub_key_to_args={
+    'vswitch_host':lambda x:{'hostname':x},
+    '''
+    the delimiter is -->,'server-1121-->0000:00:0.2'
+    or 'server-1121-->eth_pcap0,iface=eth0'
+    '''
+    'vswitch_interface':lambda x:{'host':x.split('-->')[0],'dev_addr':x.split('-->')[1]},
+    'vswitch_lan_zone':lambda x:{'name':x}
+}
+
 #
 #root_key as the table name
 #sub_key as object name
@@ -54,30 +73,67 @@ class inventory_base(SyncObj):
             else:
                 root_keeper.set(root_key,sub_key,None,False)
         except:
-            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s',str(root_key),str(sub_key),str(args))
+            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s'%(str(root_key),str(sub_key),str(args)))
             e3loger.error(str(traceback.format_exc()))
             return None,False
 
-    def get_object(self,root_key,sub_key,**args):
+    def get_object(self,root_key,sub_key):
         try:
             obj,valid=root_keeper.get(root_key,sub_key)
-            print('debug:',obj,valid)
             if not valid:
-                obj=dispatching_for_retrieval[root_key](**args)
-                print('debug:',obj)
-                root_keeper.set(root_key,sub_key,obj,True if obj else False)
+                obj=dispatching_for_retrieval[root_key](**sub_key_to_args[root_key](sub_key))
+                #if the object can not be retrieved, leave the keeper entry empty
+                if obj:
+                    root_keeper.set(root_key,sub_key,obj,True)
             return obj,True if obj else False
         except:
-            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s',str(root_key),str(sub_key),str(args))
+            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s'%(str(root_key),str(sub_key),str(args)))
             e3loger.error(str(traceback.format_exc()))
             return None,False
 
+    def list_objects(self,root_key):
+        ret=dict()
+        try:
+            sub_lst=root_keeper.list(root_key)
+            for sub_key in sub_lst:
+                ret[sub_key]=self.get_object(root_key,sub_key)
+        except:
+            e3loger.error(str(traceback.format_exc()))
+        return ret
+
+    '''
+    https://github.com/bakwc/PySyncObj/issues/76
+    here no known way to get the infomation
+    whether it's synchronous invocation or
+    whether the callback is set, to work this around, the user_ prefixed
+    callback and sync are introdduced,
+    often the caller should only specify user_callback instead callback,
+    and if conducting synchronuously this operation, specify both user_sync and sync
+    updates:do not use user_sync, this will cause errors
+    use user_callback instead of callback
+    '''
     @replicated
-    def unregister_object(self,root_key,sub_key):
-        pass
+    def unregister_object(self,root_key,sub_key,user_callback=None):
+        if self._isReady() is False:
+            e3loger.warning('synchronization state not ready')
+            return False
+        try:
+            if self._isLeader() is True:
+                dispatching_for_deletion[root_key](**sub_key_to_args[root_key](sub_key))
+                #if no exception thrown,things go normal
+                #try to invoke another post callback with the same manner
+                e3loger.debug('invoking unregister_object_post for<%s,%s>'%(root_key,sub_key))
+                self.unregister_object_post(root_key,sub_key,callback=user_callback)
+                return True
+        except:
+            e3loger.error('with given root_key:%s,sub_key:%s '%(str(root_key),str(sub_key)))
+            e3loger.error(str(traceback.format_exc()))
+            return False
 
-
-    
+    @replicated
+    def unregister_object_post(self,root_key,sub_key):
+        e3loger.debug('unset<%s,%s>'%(root_key,sub_key))
+        root_keeper.unset(root_key,sub_key)
 
 
 if __name__=='__main__':
