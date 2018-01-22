@@ -8,7 +8,8 @@ from pysyncobj import SyncObj
 from pysyncobj import SyncObjConf
 from pysyncobj import replicated
 from e3net.common.e3log import get_e3loger
-
+from e3net.common.e3config import get_config
+ 
 from e3net.db.db_vswitch_host import db_register_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_register_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_register_e3vswitch_lanzone
@@ -45,6 +46,15 @@ sub_key_to_args={
     'vswitch_lan_zone':lambda x:{'name':x}
 }
 
+
+cluster_conf={
+    'cluster':
+        {
+            'local_address':'localhost:8333',
+            'peer_addresses':''
+    }
+}
+
 #
 #root_key as the table name
 #sub_key as object name
@@ -55,27 +65,36 @@ class inventory_base(SyncObj):
         super(inventory_base,self).__init__(selfaddr,otheraddress,conf)
 
     @replicated
-    def register_object(self,root_key,sub_key,**args):
+    def register_object(self,root_key,sub_key,user_callback=None,**args):
         if self._isReady() is False:
             e3loger.warning('synchronization state not ready')
-            return None,False
+            return False,'sync base not ready'
         try:
             #make esure root_key is in the registery dispatching dictionary
             if root_key not in dispatching_for_registery:
                 e3loger.error('%s is not in registery dispaching dictionary'%(root_key))
-                return None,False
+                return False,'%s not in inventory base'%(root_key)
             if self._isLeader() is True:
                 ret=dispatching_for_registery[root_key](**args)
-            #invalidate the cached object
+                e3loger.debug('invoking register_object_post for <%s,%s>'%(root_key,sub_key))
+                self.register_object_post(root_key,sub_key,True,callback=user_callback)
+                return True,'invoking the bottom half of registery process'
+            return True,'non-Leader invocation'
+        except:
+            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s'%(str(root_key),str(sub_key),str(args)))
+            e3loger.error(str(traceback.format_exc()))
+            return False,'%s'%(str(traceback.format_exc()))
+
+    @replicated
+    def register_object_post(self,root_key,sub_key,success):
+        e3loger.debug('post registery call:<%s,%s> %s'%(root_key,sub_key,success))
+        if success:
             obj,valid=root_keeper.get(root_key,sub_key)
             if valid:
                 root_keeper.invalidate(root_key,sub_key)
             else:
                 root_keeper.set(root_key,sub_key,None,False)
-        except:
-            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s'%(str(root_key),str(sub_key),str(args)))
-            e3loger.error(str(traceback.format_exc()))
-            return None,False
+
 
     def get_object(self,root_key,sub_key):
         try:
@@ -135,8 +154,32 @@ class inventory_base(SyncObj):
         e3loger.debug('unset<%s,%s>'%(root_key,sub_key))
         root_keeper.unset(root_key,sub_key)
 
+invt_base=None
+def e3inventory_base_init():
+    global invt_base
+    local_address=get_config(cluster_conf,'cluster','local_address')
+    peer_addresses=get_config(cluster_conf,'cluster','peer_addresses')
+    local=local_address.strip()
+    peer=list()
+    for addr in peer_addresses.split(','):
+        addr=addr.strip()
+        if addr=='':
+            continue
+        peer.append(addr)
+    e3loger.info('try to instantiate inventory service with local:%s and peer(s):%s'%(local,peer))
+    invt_base=inventory_base(local,peer)
+
+def get_inventory_base():
+    return invt_base
 
 if __name__=='__main__':
+    from e3net.common.e3config import add_config_file
+    from e3net.common.e3config import load_configs
+    add_config_file('/etc/e3net/e3vswitch.ini')
+    load_configs()
+    e3inventory_base_init()
+        
+    '''
     from e3net.db.db_base import init_database
     from e3net.db.db_base import create_database_entries
     DB_NAME='E3NET_VSWITCH'
@@ -149,3 +192,4 @@ if __name__=='__main__':
         arg['ip']='130.140.150.1'
         arg['hostname']='server'
         print(base.register_object('vswitch_host','container_host1',**arg))
+    '''

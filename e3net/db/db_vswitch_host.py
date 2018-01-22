@@ -41,8 +41,10 @@ class E3VswitchHost(DB_BASE):
         ret['host_ip']=self.host_ip
         ret['host_status']=self.host_status
         return str(ret)
-
-def db_register_e3vswitch_host(hostname,ip,desc=''):
+'''
+(re-)register the host in DB
+'''
+def db_register_e3vswitch_host(hostname,ip,status,desc=''):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
@@ -50,12 +52,14 @@ def db_register_e3vswitch_host(hostname,ip,desc=''):
         if host:
             host.description=desc
             host.host_ip=ip
+            host.host_status=status
         else:
             host=E3VswitchHost()
             host.id=str(uuid4())
             host.name=hostname
             host.description=desc
             host.host_ip=ip
+            host.host_status=status
             session.add(host)
         session.commit()
         e3loger.info('register/update E3VswitchHost:%s'%(str(host)))
@@ -64,6 +68,7 @@ def db_register_e3vswitch_host(hostname,ip,desc=''):
         raise e3_exception('make sure host\'s IP and hotsname are unique')
     finally:
         session.close()
+
 def db_get_e3vswitch_host(hostname):
     session=db_sessions[DB_NAME]()
     host=None
