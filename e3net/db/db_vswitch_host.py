@@ -104,6 +104,7 @@ def db_unregister_e3vswitch_host(hostname):
         if host:
             session.delete(host)
             session.commit()
+            e3loger.info('delete E3VswitchHost:%s'%(host))
     except:
         session.rollback()
         raise e3_exception('host must not be in use by other entrities')

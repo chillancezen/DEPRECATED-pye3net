@@ -11,7 +11,10 @@ from sqlalchemy import Enum
 from sqlalchemy import Integer
 from sqlalchemy import ForeignKey
 from uuid import uuid4
+from e3net.common.e3log import get_e3loger
+import traceback
 
+e3loger=get_e3loger('e3vswitch_controller')
 
 DB_NAME='E3NET_VSWITCH'
 
@@ -48,6 +51,7 @@ def db_register_e3vswitch_lanzone(name,zone_type=E3VSWITCH_LAN_ZONE_TYPE_CUSTOME
             lanzone.zone_type=zone_type
             session.add(lanzone)
         session.commit()
+        e3loger.info('register/update lanzone:%s'%(lanzone))
     except:
         session.rollback()
         raise e3_exception('make sure lan zone name is unique')
@@ -85,6 +89,7 @@ def db_unregister_e3vswitch_lanzone(name):
         if lanzone:
             session.delete(lanzone)
             session.commit()
+            e3loger.info('unregister E3VswitchLANZone:%s'%(lanzone))
     except:
         session.rollback()
         raise e3_exception('lan zone can not unregistered and may it be in use')

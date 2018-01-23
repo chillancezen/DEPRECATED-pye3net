@@ -37,11 +37,9 @@ dispatching_for_deletion={
     'vswitch_lan_zone':db_unregister_e3vswitch_lanzone,
 }
 sub_key_to_args={
-    'vswitch_host':lambda x:{'hostname':x},
-    '''
-    the delimiter is -->,'server-1121-->0000:00:0.2'
-    or 'server-1121-->eth_pcap0,iface=eth0'
-    '''
+    'vswitch_host':lambda x:{'hostname':x},    
+    #the delimiter is -->,'server-1121-->0000:00:0.2'
+    #or 'server-1121-->eth_pcap0,iface=eth0'
     'vswitch_interface':lambda x:{'host':x.split('-->')[0],'dev_addr':x.split('-->')[1]},
     'vswitch_lan_zone':lambda x:{'name':x}
 }
@@ -95,7 +93,9 @@ class inventory_base(SyncObj):
             else:
                 root_keeper.set(root_key,sub_key,None,False)
 
-
+    '''
+    return <False/True,failure reason/Object>
+    '''
     def get_object(self,root_key,sub_key):
         try:
             obj,valid=root_keeper.get(root_key,sub_key)
@@ -104,21 +104,26 @@ class inventory_base(SyncObj):
                 #if the object can not be retrieved, leave the keeper entry empty
                 if obj:
                     root_keeper.set(root_key,sub_key,obj,True)
-            return obj,True if obj else False
+            return True if obj else False,obj if obj else 'database lookup fails'
         except:
-            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s'%(str(root_key),str(sub_key),str(args)))
+            e3loger.error('with given root_key:%s,sub_key:%s'%(str(root_key),str(sub_key)))
             e3loger.error(str(traceback.format_exc()))
-            return None,False
+            return False,'%s'%(str(traceback.format_exc()))
 
+    '''
+    return <True/False,list/failure reason> tuple
+    '''
     def list_objects(self,root_key):
         ret=dict()
         try:
             sub_lst=root_keeper.list(root_key)
             for sub_key in sub_lst:
                 ret[sub_key]=self.get_object(root_key,sub_key)
+            return True,ret
         except:
             e3loger.error(str(traceback.format_exc()))
-        return ret
+            return False,'%s'%(str(traceback.format_exc()))
+        
 
     '''
     https://github.com/bakwc/PySyncObj/issues/76
@@ -135,7 +140,7 @@ class inventory_base(SyncObj):
     def unregister_object(self,root_key,sub_key,user_callback=None):
         if self._isReady() is False:
             e3loger.warning('synchronization state not ready')
-            return False
+            return False,'synchronization state not ready'
         try:
             if self._isLeader() is True:
                 dispatching_for_deletion[root_key](**sub_key_to_args[root_key](sub_key))
@@ -143,11 +148,12 @@ class inventory_base(SyncObj):
                 #try to invoke another post callback with the same manner
                 e3loger.debug('invoking unregister_object_post for<%s,%s>'%(root_key,sub_key))
                 self.unregister_object_post(root_key,sub_key,callback=user_callback)
-                return True
+                return True,'unregister_object_post invoked'
+            return True,'no-leader invocation'
         except:
             e3loger.error('with given root_key:%s,sub_key:%s '%(str(root_key),str(sub_key)))
             e3loger.error(str(traceback.format_exc()))
-            return False
+            return False,'%s'%(str(traceback.format_exc()))
 
     @replicated
     def unregister_object_post(self,root_key,sub_key):

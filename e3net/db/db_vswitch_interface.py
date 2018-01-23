@@ -12,7 +12,10 @@ from sqlalchemy import Integer
 from sqlalchemy import ForeignKey
 from sqlalchemy import and_
 from uuid import uuid4
+from e3net.common.e3log import get_e3loger
+import traceback
 
+e3loger=get_e3loger('e3vswitch_controller')
 
 DB_NAME='E3NET_VSWITCH'
 
@@ -80,6 +83,7 @@ def db_register_e3vswitch_interface(hostname,dev_addr,
             iface.interface_type=iface_type
             session.add(iface)
         session.commit()
+        e3loger.info('register/update E3VswitchInterface:%s'%(iface))
     except:
         session.rollback()
         raise e3_exception('invalid arguments to resgiter an interface')
@@ -116,6 +120,7 @@ def db_unregister_e3vswitch_interface(host,dev_addr):
         if iface and iface.reference_count==0:
             session.delete(iface)
             session.commit()
+            e3loger.info('unregister E3VswitchInterface:%s'%(iface))
     except:
         session.rollback()
         raise e3_exception('make sure interface ref count is zero')
