@@ -56,10 +56,13 @@ cluster_conf={
 #
 #root_key as the table name
 #sub_key as object name
+#right here we also implement distributed lock primitive
 #
 e3loger=get_e3loger('e3vswitch_controller')
 class inventory_base(SyncObj):
     def __init__(self,selfaddr,otheraddress,conf=None):
+        #a dictionary which contains tuple <locakpath,expiry-time>
+        self._locks=dict()
         super(inventory_base,self).__init__(selfaddr,otheraddress,conf)
 
     @replicated
@@ -159,7 +162,46 @@ class inventory_base(SyncObj):
     def unregister_object_post(self,root_key,sub_key):
         e3loger.debug('unset<%s,%s>'%(root_key,sub_key))
         root_keeper.unset(root_key,sub_key)
+    
+    #
+    #distributed lock implementation
+    #use caller's time to synchronize the lock, DO NOT use local tome,
+    #because different nodes' time do not be the same.
+    #this must be a LESSON, and use NTP service to synchronize the time to almost the same.
+    #
+    @replicated
+    def acquire_lock(self,lock_path,caller_id,current_time,lock_duration):
+        lock=self._locks.get(lock_path,None)
+        lock_id=None
+        expiry_time=0
+        #release previous in case of expiry
+        if lock:
+            lock_id,expiry_time=lock
+            if expiry_time<current_time:
+                lock=None
+        if not lock or lock_id==caller_id:
+            self._locks[lock_path]=(caller_id,current_time+lock_duration)
+            return True
+        return False
+    def is_locked(self,lock_path,caller_id,current_time):
+        lock=self._locks.get(lock_path,None)
+        if lock:
+            lock_id,expiry_time=lock
+            if lock_id==caller_id and expiry_time >current_time:
+                return True
+        return False
 
+    @replicated
+    def release_lock(self,lock_path,caller_id):
+        lock=self._locks.get(lock_path,None)
+        if not lock:
+            return True
+        lock_id,expiry_time=lock
+        if lock_id == caller_id:
+            del self._locks[lock_path]
+            return True
+        return False
+            
 invt_base=None
 def e3inventory_base_init():
     global invt_base
