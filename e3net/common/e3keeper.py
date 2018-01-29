@@ -46,7 +46,7 @@ class root_entry():
     #set the root_key:leaf_key:to leaf
     #this requires two tiers of LOCKs
     #
-    def set(self,root_key,leaf_key,val,invalid=True):
+    def set(self,root_key,leaf_key,val,valid=True):
         sub=self._get_sub_entry_locked(root_key)
         if not sub:
             self._set_sub_entry(root_key)
@@ -56,7 +56,7 @@ class root_entry():
             sub._set_entry(leaf_key)
             leaf=sub._get_entry_locked(leaf_key)
         leaf._set(val)
-        if not invalid:
+        if not valid:
             leaf._invalidate()
 
     #

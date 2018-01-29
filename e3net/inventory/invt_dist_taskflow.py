@@ -14,11 +14,14 @@ import threading
 import queue
 import time
 import contextlib
+from e3net.inventory.invt_base import get_inventory_base
+
 
 _taskflow_backend=None
 _taskflow_queue=queue.Queue()
 invt_taskflow_factory=dict()
 
+root_key='taskflow'
 E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN='unknown'
 E3TASKFLOW_SCHEDULE_STATUS_ISSUED='issued'
 
@@ -62,6 +65,7 @@ def taskflow_base_worker(arg):
             if self.callback:
                 self.callback(self)
         except Exception as e:
+            self.failure=str(e)
             if self.callback:
                 self.callback(self,e)
 
@@ -70,7 +74,7 @@ def register_taskflow_category(category,flow_generator):
 
 class e3_taskflow:
     def __init__(self,category,store=None,sync=True,callback=None):
-        self.category=category
+        self.category=category #this field acts as root_key
         self.schedule_node=None
         self.schedule_status=E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN
         self.book_id=None
@@ -79,8 +83,32 @@ class e3_taskflow:
         self.callback=callback
         self.store=store
         self.engine=None
+        self.failure=None
         self.guard=threading.Lock()
-        
+    def _generate_sync_state(self):
+        ret=dict()
+        ret['category']=self.category
+        ret['schedule_node']=self.schedule_node
+        ret['schedule_status']=self.schedule_status
+        ret['book_id']=self.book_id
+        ret['flow_id']=self.flow_id
+        ret['sync']=self.sync
+        if self.engine:
+            ret['store']=self.engine.storage.fetch_all()
+        else:
+            ret['store']={}
+        ret['failure']=self.failure
+        return ret
+
+    #synchronize taskflow state among cluster
+    def sync_state(self):
+        tf_obj=self._generate_sync_state()
+        base=get_inventory_base()
+        if not base:
+            return False,'inventory base not found'
+        sub_key=self.book_id
+        return base.set_raw_object(root_key,sub_key,tf_obj)
+    
     def issue(self):
         try:
             self.guard.acquire()
@@ -109,13 +137,33 @@ class e3_taskflow:
                 self.schedule_status=E3TASKFLOW_SCHEDULE_STATUS_ISSUED
                 _taskflow_queue.put(self)
         except Exception as e:
+            self.failure=str(e)
             if self.callback:
                 self.callback(self,e)
             else:
-                raise e 
+                raise e
         finally:
             self.guard.release()
         
+def invt_get_taskflow(logbook_id):
+    base=get_inventory_base()
+    if not base:
+        return False,'inventory base not found'
+    sub_key=logbook_id
+    return base.get_raw_object(root_key,sub_key)
+
+def invt_list_taskflows():
+    base=get_inventory_base()
+    if not base:
+        return False,'inventory base not found'
+    return base.list_raw_objects(root_key)
+
+def invt_unset_taskflow(logbook_id):
+    base=get_inventory_base()
+    if not base:
+        return False,'inventory base not found'
+    sub_key=logbook_id
+    return base.unset_raw_object(root_key,sub_key)
 
 def taskflow_init():
     taskflow_backend_init()
@@ -125,9 +173,8 @@ class do_foo(task.Task):
     default_provides='meeeow'
     def execute(self,spec):
         print('hello world:',spec)
+        #raise Exception('cute')
         return 'meeow foo'
-    def __del__(self):
-        print('del:',self)
 def generate_vm_creation_flow():
     return do_foo()
 register_taskflow_category('vm-creation',generate_vm_creation_flow)
@@ -141,6 +188,8 @@ if __name__=='__main__':
     add_config_file('/etc/e3net/e3vswitch.ini')
     load_configs()
     taskflow_init()
-    e3_taskflow('vm-creation',sync=True,callback=cb_vm_create,store={'spec':'ucte meeow'}).issue()
+    ts=e3_taskflow('vm-creation',sync=True,callback=cb_vm_create,store={'spec':'ucte meeow'})
+    ts.issue()
+    ts.sync_state()
     e3_taskflow('vm-creation',sync=False,callback=cb_vm_create,store={'spec':'ucte meeow122'}).issue()
-    #time.sleep(100)
+    print(ts._generate_sync_state())

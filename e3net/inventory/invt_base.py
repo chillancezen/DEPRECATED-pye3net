@@ -64,7 +64,59 @@ class inventory_base(SyncObj):
         #a dictionary which contains tuple <locakpath,expiry-time>
         self._locks=dict()
         super(inventory_base,self).__init__(selfaddr,otheraddress,conf)
+    #
+    #the raw subjec manipulation
+    # 
+    @replicated
+    def set_raw_object(self,root_key,sub_key,raw_obj):
+        if self._isReady() is False:
+            e3loger.warning('synchronization state not ready')
+            return False,'sync base not ready'
+        try:
+            root_keeper.set(root_key,sub_key,raw_obj,True)
+            e3loger.info('set raw object for <%s,%s> as %s'%(root_key,sub_key,raw_obj))
+            return True,None
+        except Exception as e:
+            e3loger.error('failed to set raw object for <%s,%s>'%(root_key,sub_key))
+            return False,e
 
+    def get_raw_object(self,root_key,sub_key):
+        try:
+            obj,valid=root_keeper.get(root_key,sub_key)
+            return valid,obj if valid else 'not valid sub_key or something else gets wrong'
+        except Exception as e:
+            e3loger.error('failed to retrieve raw object <%s,%s> with exception:'%(root_key,sub_key
+                ,str(traceback.format_exc())))
+            return False,e
+
+    def list_raw_objects(self,root_key):
+        ret=dict()
+        try:
+            sub_lst=root_keeper.list(root_key)
+            for sub_key in sub_lst:
+                ret[sub_key]=self.get_raw_object(root_key,sub_key)
+            return True,ret
+        except Exception as e:
+            e3loger.error(str(traceback.format_exc()))
+            return False,e
+
+    @replicated
+    def unset_raw_object(self,root_key,sub_key):
+        if self._isReady() is False:
+            e3loger.warning('synchronization state not ready')
+            return False,'sync base not ready'
+        try:
+            root_keeper.unset(root_key,sub_key)
+            e3loger.info('unset raw object <%s,%s>'%(root_key,sub_key))
+            return True,None
+        except Exception as e:
+            e3loger.error('failed yo unset raw object <%s,%s> with exception:%s'%(root_key,sub_key,str(traceback.format_exc())))
+            return False,e
+
+    #
+    #the replicated methods are stateful,
+    #usually a database operation is onvolved
+    #
     @replicated
     def register_object(self,root_key,sub_key,user_callback=None,**args):
         if self._isReady() is False:
@@ -81,10 +133,10 @@ class inventory_base(SyncObj):
                 self.register_object_post(root_key,sub_key,True,callback=user_callback)
                 return True,'invoking the bottom half of registery process'
             return True,'non-Leader invocation'
-        except:
+        except Exception as e:
             e3loger.error('with given root_key:%s,sub_key:%s and arg:%s'%(str(root_key),str(sub_key),str(args)))
             e3loger.error(str(traceback.format_exc()))
-            return False,'%s'%(str(traceback.format_exc()))
+            return False,e
 
     @replicated
     def register_object_post(self,root_key,sub_key,success):
@@ -108,10 +160,10 @@ class inventory_base(SyncObj):
                 if obj:
                     root_keeper.set(root_key,sub_key,obj,True)
             return True if obj else False,obj if obj else 'database lookup fails'
-        except:
+        except Exception as e:
             e3loger.error('with given root_key:%s,sub_key:%s'%(str(root_key),str(sub_key)))
             e3loger.error(str(traceback.format_exc()))
-            return False,'%s'%(str(traceback.format_exc()))
+            return False,e
 
     '''
     return <True/False,list/failure reason> tuple
@@ -123,9 +175,9 @@ class inventory_base(SyncObj):
             for sub_key in sub_lst:
                 ret[sub_key]=self.get_object(root_key,sub_key)
             return True,ret
-        except:
+        except Exception as e:
             e3loger.error(str(traceback.format_exc()))
-            return False,'%s'%(str(traceback.format_exc()))
+            return False,e
         
 
     '''
@@ -153,10 +205,10 @@ class inventory_base(SyncObj):
                 self.unregister_object_post(root_key,sub_key,callback=user_callback)
                 return True,'unregister_object_post invoked'
             return True,'no-leader invocation'
-        except:
+        except Exception as e:
             e3loger.error('with given root_key:%s,sub_key:%s '%(str(root_key),str(sub_key)))
             e3loger.error(str(traceback.format_exc()))
-            return False,'%s'%(str(traceback.format_exc()))
+            return False,e
 
     @replicated
     def unregister_object_post(self,root_key,sub_key):
