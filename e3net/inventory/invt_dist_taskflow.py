@@ -27,14 +27,14 @@ E3TASKFLOW_SCHEDULE_STATUS_ISSUED='issued'
 
 e3_taskflow_nr_worker=4
 
-def taskflow_backend_init():
+def _taskflow_backend_init():
     global _taskflow_backend
     connection=get_config(None,'taskflow','backend_connection')
     if not connection:
         raise Exception('can not find taskflow:backend_connection from configuration file')
     _taskflow_backend=backends.fetch(conf={'connection':connection})
 
-def taskflow_base_worker_init():
+def _taskflow_base_worker_init():
     for i in range(e3_taskflow_nr_worker):
         t=threading.Thread(target=taskflow_base_worker,args=[i])
         t.start()
@@ -68,6 +68,8 @@ def taskflow_base_worker(arg):
             self.failure=str(e)
             if self.callback:
                 self.callback(self,e)
+        finally:
+            self.sync_state()
 
 def register_taskflow_category(category,flow_generator):
     invt_taskflow_factory[category]=flow_generator
@@ -76,6 +78,9 @@ class e3_taskflow:
     def __init__(self,category,store=None,sync=True,callback=None):
         self.category=category #this field acts as root_key
         self.schedule_node=None
+        base=get_inventory_base()
+        if base:
+            self.schedule_node=base._getSelfNodeAddr() 
         self.schedule_status=E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN
         self.book_id=None
         self.flow_id=None
@@ -109,7 +114,7 @@ class e3_taskflow:
         sub_key=self.book_id
         return base.set_raw_object(root_key,sub_key,tf_obj)
     
-    def issue(self):
+    def issue(self,auto_sync=True):
         try:
             self.guard.acquire()
             if self.schedule_status!=E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN:
@@ -130,6 +135,9 @@ class e3_taskflow:
                         book=book,
                         store=self.store)
                 self.schedule_status=E3TASKFLOW_SCHEDULE_STATUS_ISSUED
+                #prior to the flow,synchronize state in case the tasks need it
+                if auto_sync:
+                    self.self.sync_state()
                 self.engine.run()
                 if self.callback:
                     self.callback(self)
@@ -144,6 +152,8 @@ class e3_taskflow:
                 raise e
         finally:
             self.guard.release()
+            if auto_sync:
+                self.sync_state()
         
 def invt_get_taskflow(logbook_id):
     base=get_inventory_base()
@@ -159,15 +169,24 @@ def invt_list_taskflows():
     return base.list_raw_objects(root_key)
 
 def invt_unset_taskflow(logbook_id):
+    try:
+        with contextlib.closing(_taskflow_backend.get_connection()) as conn:
+            conn.destroy_logbook(logbook_id)
+    except Exception as e:
+        e3loger.warning('error occurs when dstroying log book:%s'%(logbook_id))
     base=get_inventory_base()
     if not base:
         return False,'inventory base not found'
     sub_key=logbook_id
     return base.unset_raw_object(root_key,sub_key)
 
+
 def taskflow_init():
-    taskflow_backend_init()
-    taskflow_base_worker_init()
+    _taskflow_backend_init()
+    _taskflow_base_worker_init()
+
+
+
 
 class do_foo(task.Task):
     default_provides='meeeow'
