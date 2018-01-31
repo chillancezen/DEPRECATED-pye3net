@@ -1,7 +1,7 @@
 #
 #Copyright (c) 2018 Jie Zheng
 #
-
+import queue
 import traceback
 from e3net.common.e3keeper import root_keeper
 from pysyncobj import SyncObj
@@ -52,7 +52,7 @@ cluster_conf={
             'peer_addresses':''
     }
 }
-
+_event_queue=queue.Queue()
 #
 #root_key as the table name
 #sub_key as object name
@@ -64,6 +64,15 @@ class inventory_base(SyncObj):
         #a dictionary which contains tuple <locakpath,expiry-time>
         self._locks=dict()
         super(inventory_base,self).__init__(selfaddr,otheraddress,conf)
+    
+    #put an event into the event backlog quuee
+    @replicated
+    def notify_event(self,event):
+        if self._isReady() is True:
+            _event_queue.put(event)
+            return True,None
+        else:
+            return False,'sync state not ready'
     #
     #the raw subjec manipulation
     # 
