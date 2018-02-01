@@ -63,9 +63,9 @@ def db_register_e3vswitch_host(hostname,ip,status,desc=''):
             session.add(host)
         session.commit()
         e3loger.info('register/update E3VswitchHost:%s'%(str(host)))
-    except:
+    except Exception as e:
         session.rollback()
-        raise e3_exception('make sure host\'s IP and hotsname are unique')
+        raise e
     finally:
         session.close()
 
@@ -105,9 +105,9 @@ def db_unregister_e3vswitch_host(hostname):
             session.delete(host)
             session.commit()
             e3loger.info('delete E3VswitchHost:%s'%(host))
-    except:
+    except Exception as e:
         session.rollback()
-        raise e3_exception('host must not be in use by other entrities')
+        raise e
     finally:
         session.close()
 
