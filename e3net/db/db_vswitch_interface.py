@@ -84,6 +84,7 @@ def db_register_e3vswitch_interface(hostname,dev_addr,
             session.add(iface)
         session.commit()
         e3loger.info('register/update E3VswitchInterface:%s'%(iface))
+        return iface
     except:
         session.rollback()
         raise e3_exception('invalid arguments to resgiter an interface')

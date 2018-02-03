@@ -2,6 +2,12 @@
 #Copyright (c) 2018 Jie Zheng
 #
 from e3net.common.e3exception import e3_exception
+from e3net.common.e3exception import E3_EXCEPTION_IN_USE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_FOUND
+from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
+from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
+from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
 from e3net.db.db_base import db_sessions
 from e3net.db.db_base import DB_BASE
 from sqlalchemy import String
@@ -37,61 +43,90 @@ class E3VswitchLANZone(DB_BASE):
         ret['name']=self.name
         ret['zone_type']=self.zone_type
         return str(ret)
+
+    def to_key(self):
+        return str(self.id)
+
 def db_register_e3vswitch_lanzone(name,zone_type=E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
         lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==name).first()
         if lanzone:
-            lanzone.zone_type=zone_type
+            raise e3_exception(E3_EXCEPTION_BE_PRESENT,'item:%s already in database'%(lanzone))
         else:
             lanzone=E3VswitchLANZone()
             lanzone.id=str(uuid4())
             lanzone.name=name
             lanzone.zone_type=zone_type
             session.add(lanzone)
-        session.commit()
-        e3loger.info('register/update lanzone:%s'%(lanzone))
-    except:
+            session.commit()
+            e3loger.info('registering lanzone:%s succeeds'%(lanzone))
+            return lanzone
+    except Exception as e:
         session.rollback()
-        raise e3_exception('make sure lan zone name is unique')
+        raise e
     finally:
         session.close()
+def db_update_e3vswitch_lanzone(uuid,fields_change_dict):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.id==uuid).first()
+        if not lanzone:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND,'vswitch lanzone %s not found'%(uuid))
+        for field in fields_change_dict:
+            if not hasattr(lanzone,field):
+                raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'%s is not a valid field of E3VswitchLANZone'%(field))
+            setattr(lanzone,field,fields_change_dict[field])
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
 def db_list_e3vswitch_lanzones():
     session=db_sessions[DB_NAME]()
     lst=None
     try:
         session.begin()
         lst=session.query(E3VswitchLANZone).all()
-    except:
-        lst=list()
+        return lst
+    except Exception as e:
         session.rollback()
+        raise e
     finally:
         session.close()
-    return lst
-def db_get_e3vswitch_lanzone(name):
+
+def db_get_e3vswitch_lanzone(uuid):
     session=db_sessions[DB_NAME]()
     lanzone=None
     try:
         session.begin()
-        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==name).first()
-    except:
+        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.id==uuid).first()
+        if not lanzone:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+        return lanzone 
+    except Exception as e:
         session.rollback()
-        lanzone=None
+        raise e
     finally:
         session.close()
-    return lanzone
-def db_unregister_e3vswitch_lanzone(name):
+
+def db_unregister_e3vswitch_lanzone(uuid):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==name).first()
+        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.id==uuid).first()
         if lanzone:
             session.delete(lanzone)
             session.commit()
             e3loger.info('unregister E3VswitchLANZone:%s'%(lanzone))
-    except:
+        else:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+    except Exception as e:
         session.rollback()
-        raise e3_exception('lan zone can not unregistered and may it be in use')
+        raise e
     finally:
         session.close()

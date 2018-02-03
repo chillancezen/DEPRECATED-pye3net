@@ -2,6 +2,12 @@
 #Copyright (c) 2018 Jie Zheng
 #
 from e3net.common.e3exception import e3_exception
+from e3net.common.e3exception import E3_EXCEPTION_IN_USE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_FOUND
+from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
+from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
+from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
 from e3net.db.db_base import db_sessions
 from e3net.db.db_base import DB_BASE
 from sqlalchemy import String
@@ -41,18 +47,20 @@ class E3VswitchHost(DB_BASE):
         ret['host_ip']=self.host_ip
         ret['host_status']=self.host_status
         return str(ret)
-'''
-(re-)register the host in DB
-'''
+
+    def to_key(self):
+        return str(self.id)
+
 def db_register_e3vswitch_host(hostname,ip,status,desc=''):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
         host=session.query(E3VswitchHost).filter(E3VswitchHost.name==hostname).first()
         if host:
-            host.description=desc
-            host.host_ip=ip
-            host.host_status=status
+            #host.description=desc
+            #host.host_ip=ip
+            #host.host_status=status
+            raise e3_exception(E3_EXCEPTION_BE_PRESENT,'item:%s already in database'%(host))
         else:
             host=E3VswitchHost()
             host.id=str(uuid4())
@@ -61,27 +69,48 @@ def db_register_e3vswitch_host(hostname,ip,status,desc=''):
             host.host_ip=ip
             host.host_status=status
             session.add(host)
-        session.commit()
-        e3loger.info('register/update E3VswitchHost:%s'%(str(host)))
+            session.commit()
+            e3loger.info('registering E3VswitchHost:%s succeeds'%(str(host)))
+            return host
     except Exception as e:
         session.rollback()
         raise e
     finally:
         session.close()
 
-def db_get_e3vswitch_host(hostname):
+def db_update_e3vswitch_host(uuid,fields_change_dict):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        host=session.query(E3VswitchHost).filter(E3VswitchHost.id==uuid).first()
+        if not host:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND,'vswitch host %s not found'%(uuid))
+        for field in fields_change_dict:
+            if not hasattr(host,field):
+                raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'%s is not a valid field of E3VswitchHost'%(field))
+            setattr(host,field,fields_change_dict[field])
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
+def db_get_e3vswitch_host(uuid):
     session=db_sessions[DB_NAME]()
     host=None
     try:
         session.begin()
-        host=session.query(E3VswitchHost).filter(E3VswitchHost.name==hostname).first()
+        host=session.query(E3VswitchHost).filter(E3VswitchHost.id==uuid).first()
+        if not host:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
         e3loger.debug('retrieve E3VswitchHost:%s'%(str(host)))
-    except:
-        host=None
+        return host
+    except Exception as e:
         session.rollback()
+        raise e
     finally:
         session.close()
-    return host
 
 def db_list_e3vswitch_hosts():
     session=db_sessions[DB_NAME]()
@@ -89,22 +118,24 @@ def db_list_e3vswitch_hosts():
     try:
         session.begin()
         lst=session.query(E3VswitchHost).all()
-    except:
-        lst=list()
+        return lst
+    except Exception as e:
         session.rollback()
+        raise e
     finally:
         session.close()
-    return lst
 
-def db_unregister_e3vswitch_host(hostname):
+def db_unregister_e3vswitch_host(uuid):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        host=session.query(E3VswitchHost).filter(E3VswitchHost.name==hostname).first()
+        host=session.query(E3VswitchHost).filter(E3VswitchHost.id==uuid).first()
         if host:
             session.delete(host)
             session.commit()
-            e3loger.info('delete E3VswitchHost:%s'%(host))
+            e3loger.info('unregister E3VswitchHost:%s'%(host))
+        else:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
     except Exception as e:
         session.rollback()
         raise e

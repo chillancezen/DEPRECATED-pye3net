@@ -9,7 +9,14 @@ from pysyncobj import SyncObjConf
 from pysyncobj import replicated
 from e3net.common.e3log import get_e3loger
 from e3net.common.e3config import get_config
- 
+from e3net.common.e3exception import e3_exception
+from e3net.common.e3exception import E3_EXCEPTION_IN_USE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_FOUND
+from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
+from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
+from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
+
 from e3net.db.db_vswitch_host import db_register_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_register_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_register_e3vswitch_lanzone
@@ -17,6 +24,13 @@ dispatching_for_registery={
     'vswitch_host':db_register_e3vswitch_host,
     'vswitch_interface':db_register_e3vswitch_interface,
     'vswitch_lan_zone':db_register_e3vswitch_lanzone
+}
+
+from e3net.db.db_vswitch_host import db_update_e3vswitch_host
+from e3net.db.db_vswitch_lan_zone import db_update_e3vswitch_lanzone
+dispatching_for_update={
+    'vswitch_host':db_update_e3vswitch_host,
+    'vswitch_lan_zone':db_update_e3vswitch_lanzone
 }
 
 from e3net.db.db_vswitch_host import db_get_e3vswitch_host
@@ -37,11 +51,11 @@ dispatching_for_deletion={
     'vswitch_lan_zone':db_unregister_e3vswitch_lanzone,
 }
 sub_key_to_args={
-    'vswitch_host':lambda x:{'hostname':x},    
+    'vswitch_host':lambda x:{'uuid':x},    
     #the delimiter is -->,'server-1121-->0000:00:0.2'
     #or 'server-1121-->eth_pcap0,iface=eth0'
     'vswitch_interface':lambda x:{'host':x.split('-->')[0],'dev_addr':x.split('-->')[1]},
-    'vswitch_lan_zone':lambda x:{'name':x}
+    'vswitch_lan_zone':lambda x:{'uuid':x}
 }
 
 
@@ -123,32 +137,42 @@ class inventory_base(SyncObj):
             return False,e
 
     #
-    #the replicated methods are stateful,
-    #usually a database operation is onvolved
+    #the non-replicated methods are stateful,
+    #usually a database operation is involved
+    #we use to_key() of the registered object to determine sub_key
     #
-    @replicated
-    def register_object(self,root_key,sub_key,user_callback=None,**args):
+    def register_object(self,root_key,user_callback=None,user_sync=False,user_timeout=30,**args):
         if self._isReady() is False:
             e3loger.warning('synchronization state not ready')
-            return False,'sync base not ready'
+            raise e3_exception(E3_EXCEPTION_NOT_SUPPORT,'sync base not ready')
         try:
-            #make esure root_key is in the registery dispatching dictionary
-            if root_key not in dispatching_for_registery:
-                e3loger.error('%s is not in registery dispaching dictionary'%(root_key))
-                return False,'%s not in inventory base'%(root_key)
-            if self._isLeader() is True:
-                ret=dispatching_for_registery[root_key](**args)
-                e3loger.debug('invoking register_object_post for <%s,%s>'%(root_key,sub_key))
-                self.register_object_post(root_key,sub_key,True,callback=user_callback)
-                return True,'invoking the bottom half of registery process'
-            return True,'non-Leader invocation'
+            obj=dispatching_for_registery[root_key](**args)
+            assert(obj)
+            e3loger.debug('invoking register_or_update_object_post for <%s:%s>'%(root_key,obj))
+            self.register_or_update_object_post(root_key,obj.to_key(),True,callback=user_callback,sync=user_sync,timeout=user_timeout)
+            return obj
         except Exception as e:
-            e3loger.error('with given root_key:%s,sub_key:%s and arg:%s'%(str(root_key),str(sub_key),str(args)))
+            e3loger.error('with given root_key:%s and arg:%s'%(str(root_key),str(args)))
             e3loger.error(str(traceback.format_exc()))
-            return False,e
+            raise e
+
+    def update_object(self,root_key,sub_key,fields_change_dict,user_callback=None,user_sync=False,user_timeout=30):
+        if self._isReady() is False:
+            e3loger.warning('synchronization state not ready')
+            raise e3_exception(E3_EXCEPTION_NOT_SUPPORT,'sync base not ready')
+        try:
+            args=sub_key_to_args[root_key](sub_key)
+            args['fields_change_dict']=fields_change_dict
+            dispatching_for_update[root_key](**args)
+            e3loger.debug('invoking register_or_update_object_post for <%s:%s>'%(root_key,sub_key))
+            self.register_or_update_object_post(root_key,sub_key,True,callback=user_callback,sync=user_sync,timeout=user_timeout)
+        except Exception as e:
+            e3loger.error('with given root_key:%s sub_key:%s and fields_change_dict:%s'%(str(root_key),str(sub_key),str(fields_change_dict)))
+            e3loger.error(str(traceback.format_exc()))
+            raise e
 
     @replicated
-    def register_object_post(self,root_key,sub_key,success):
+    def register_or_update_object_post(self,root_key,sub_key,success):
         e3loger.debug('post registery call:<%s,%s> %s'%(root_key,sub_key,success))
         if success:
             obj,valid=root_keeper.get(root_key,sub_key)
@@ -157,36 +181,31 @@ class inventory_base(SyncObj):
             else:
                 root_keeper.set(root_key,sub_key,None,False)
 
-    '''
-    return <False/True,failure reason/Object>
-    '''
     def get_object(self,root_key,sub_key):
         try:
             obj,valid=root_keeper.get(root_key,sub_key)
             if not valid:
                 obj=dispatching_for_retrieval[root_key](**sub_key_to_args[root_key](sub_key))
-                #if the object can not be retrieved, leave the keeper entry empty
-                if obj:
-                    root_keeper.set(root_key,sub_key,obj,True)
-            return True if obj else False,obj if obj else 'database lookup fails'
+                #if the object can not be retrieved, an exception must be thrown
+                #anyway add an assertion here for sanity check purpose
+                assert(obj)
+                root_keeper.set(root_key,sub_key,obj,True)
+            return obj
         except Exception as e:
             e3loger.error('with given root_key:%s,sub_key:%s'%(str(root_key),str(sub_key)))
             e3loger.error(str(traceback.format_exc()))
-            return False,e
+            raise e
 
-    '''
-    return <True/False,list/failure reason> tuple
-    '''
     def list_objects(self,root_key):
         ret=dict()
-        try:
-            sub_lst=root_keeper.list(root_key)
-            for sub_key in sub_lst:
-                ret[sub_key]=self.get_object(root_key,sub_key)
-            return True,ret
-        except Exception as e:
-            e3loger.error(str(traceback.format_exc()))
-            return False,e
+        sub_lst=root_keeper.list(root_key)
+        for sub_key in sub_lst:
+            try:
+                obj=self.get_object(root_key,sub_key)
+                ret[sub_key]=obj
+            except:
+                pass
+        return ret
         
 
     '''
@@ -200,24 +219,20 @@ class inventory_base(SyncObj):
     updates:do not use user_sync, this will cause errors
     use user_callback instead of callback
     '''
-    @replicated
-    def unregister_object(self,root_key,sub_key,user_callback=None):
+    def unregister_object(self,root_key,sub_key,user_callback=None,user_sync=False,user_timeout=30):
         if self._isReady() is False:
             e3loger.warning('synchronization state not ready')
-            return False,'synchronization state not ready'
+            raise e3_exception(E3_EXCEPTION_NOT_SUPPORT,'synchronization state not ready')
         try:
-            if self._isLeader() is True:
-                dispatching_for_deletion[root_key](**sub_key_to_args[root_key](sub_key))
-                #if no exception thrown,things go normal
-                #try to invoke another post callback with the same manner
-                e3loger.debug('invoking unregister_object_post for<%s,%s>'%(root_key,sub_key))
-                self.unregister_object_post(root_key,sub_key,callback=user_callback)
-                return True,'unregister_object_post invoked'
-            return True,'no-leader invocation'
+            dispatching_for_deletion[root_key](**sub_key_to_args[root_key](sub_key))
+            #if no exception thrown,things go normal
+            #try to invoke another post callback with the same manner
+            e3loger.debug('invoking unregister_object_post for<%s,%s>'%(root_key,sub_key))
+            self.unregister_object_post(root_key,sub_key,callback=user_callback,sync=user_sync,timeout=user_timeout)
         except Exception as e:
             e3loger.error('with given root_key:%s,sub_key:%s '%(str(root_key),str(sub_key)))
             e3loger.error(str(traceback.format_exc()))
-            return False,e
+            raise e
 
     @replicated
     def unregister_object_post(self,root_key,sub_key):
