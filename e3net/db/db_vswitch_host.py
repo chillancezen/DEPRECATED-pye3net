@@ -51,23 +51,18 @@ class E3VswitchHost(DB_BASE):
     def to_key(self):
         return str(self.id)
 
-def db_register_e3vswitch_host(hostname,ip,status,desc=''):
+def db_register_e3vswitch_host(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        host=session.query(E3VswitchHost).filter(E3VswitchHost.name==hostname).first()
+        host=session.query(E3VswitchHost).filter(E3VswitchHost.name==fields_create_dict['name']).first()
         if host:
-            #host.description=desc
-            #host.host_ip=ip
-            #host.host_status=status
-            raise e3_exception(E3_EXCEPTION_BE_PRESENT,'item:%s already in database'%(host))
+            raise e3_exception(E3_EXCEPTION_BE_PRESENT)
         else:
             host=E3VswitchHost()
             host.id=str(uuid4())
-            host.name=hostname
-            host.description=desc
-            host.host_ip=ip
-            host.host_status=status
+            for field in fields_create_dict:
+                setattr(host,field,fields_create_dict[field])
             session.add(host)
             session.commit()
             e3loger.info('registering E3VswitchHost:%s succeeds'%(str(host)))

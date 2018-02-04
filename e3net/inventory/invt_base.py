@@ -20,42 +20,60 @@ from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
 from e3net.db.db_vswitch_host import db_register_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_register_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_register_e3vswitch_lanzone
+from e3net.db.db_token import db_register_role
+from e3net.db.db_token import db_register_tenant
 dispatching_for_registery={
     'vswitch_host':db_register_e3vswitch_host,
     'vswitch_interface':db_register_e3vswitch_interface,
-    'vswitch_lan_zone':db_register_e3vswitch_lanzone
+    'vswitch_lan_zone':db_register_e3vswitch_lanzone,
+    'role':db_register_role,
+    'tenant':db_register_tenant
 }
 
 from e3net.db.db_vswitch_host import db_update_e3vswitch_host
 from e3net.db.db_vswitch_lan_zone import db_update_e3vswitch_lanzone
 from e3net.db.db_vswitch_interface import db_update_e3vswitch_interface
+from e3net.db.db_token import db_update_role
+from e3net.db.db_token import db_update_tenant
 dispatching_for_update={
     'vswitch_host':db_update_e3vswitch_host,
     'vswitch_interface':db_update_e3vswitch_interface,
-    'vswitch_lan_zone':db_update_e3vswitch_lanzone
+    'vswitch_lan_zone':db_update_e3vswitch_lanzone,
+    'role':db_update_role,
+    'tenant':db_update_tenant
 }
 
 from e3net.db.db_vswitch_host import db_get_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_get_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_get_e3vswitch_lanzone
+from e3net.db.db_token import db_get_role
+from e3net.db.db_token import db_get_tenant
 dispatching_for_retrieval={
     'vswitch_host':db_get_e3vswitch_host,
     'vswitch_interface':db_get_e3vswitch_interface,
-    'vswitch_lan_zone':db_get_e3vswitch_lanzone
+    'vswitch_lan_zone':db_get_e3vswitch_lanzone,
+    'role':db_get_role,
+    'tenant':db_get_tenant
 }
 
 from e3net.db.db_vswitch_host import db_unregister_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_unregister_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_unregister_e3vswitch_lanzone
+from e3net.db.db_token import db_unregister_role
+from e3net.db.db_token import db_unregister_tenant
 dispatching_for_deletion={
     'vswitch_host':db_unregister_e3vswitch_host,
     'vswitch_interface':db_unregister_e3vswitch_interface,
     'vswitch_lan_zone':db_unregister_e3vswitch_lanzone,
+    'role':db_unregister_role,
+    'tennat':db_unregister_tenant
 }
 sub_key_to_args={
     'vswitch_host':lambda x:{'uuid':x},    
     'vswitch_interface':lambda x:{'uuid':x},
-    'vswitch_lan_zone':lambda x:{'uuid':x}
+    'vswitch_lan_zone':lambda x:{'uuid':x},
+    'role':lambda x:{'uuid':x},
+    'tenant':lambda x:{'uuid':x}
 }
 
 
@@ -141,18 +159,18 @@ class inventory_base(SyncObj):
     #usually a database operation is involved
     #we use to_key() of the registered object to determine sub_key
     #
-    def register_object(self,root_key,user_callback=None,user_sync=False,user_timeout=30,**args):
+    def register_object(self,root_key,fields_create_dict,user_callback=None,user_sync=False,user_timeout=30):
         if self._isReady() is False:
             e3loger.warning('synchronization state not ready')
             raise e3_exception(E3_EXCEPTION_NOT_SUPPORT,'sync base not ready')
         try:
-            obj=dispatching_for_registery[root_key](**args)
+            obj=dispatching_for_registery[root_key](fields_create_dict)
             assert(obj)
             e3loger.debug('invoking register_or_update_object_post for <%s:%s>'%(root_key,obj))
             self.register_or_update_object_post(root_key,obj.to_key(),True,callback=user_callback,sync=user_sync,timeout=user_timeout)
             return obj
         except Exception as e:
-            e3loger.error('with given root_key:%s and arg:%s'%(str(root_key),str(args)))
+            e3loger.error('with given root_key:%s and create_dict:%s'%(str(root_key),str(fields_create_dict)))
             e3loger.error(str(traceback.format_exc()))
             raise e
 

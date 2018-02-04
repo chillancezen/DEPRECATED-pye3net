@@ -47,18 +47,18 @@ class E3VswitchLANZone(DB_BASE):
     def to_key(self):
         return str(self.id)
 
-def db_register_e3vswitch_lanzone(name,zone_type=E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER):
+def db_register_e3vswitch_lanzone(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==name).first()
+        lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.name==fields_create_dict['name']).first()
         if lanzone:
             raise e3_exception(E3_EXCEPTION_BE_PRESENT,'item:%s already in database'%(lanzone))
         else:
             lanzone=E3VswitchLANZone()
             lanzone.id=str(uuid4())
-            lanzone.name=name
-            lanzone.zone_type=zone_type
+            for field in fields_create_dict:
+                setattr(lanzone,field,fields_create_dict[field])
             session.add(lanzone)
             session.commit()
             e3loger.info('registering lanzone:%s succeeds'%(lanzone))

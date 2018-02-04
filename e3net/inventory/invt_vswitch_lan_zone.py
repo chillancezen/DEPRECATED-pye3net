@@ -20,17 +20,13 @@ root_key='vswitch_lan_zone'
 default_user_time=60
 from e3net.db.db_vswitch_lan_zone import E3VSWITCH_LAN_ZONE_TYPE_BACKBONE,E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER
 
-def invt_register_vswitch_lan_zone(name,zone_type,user_sync=False,user_timeout=default_user_time):
-    args={
-        'name':name,
-        'zone_type':zone_type
-    }
-    if zone_type not in [E3VSWITCH_LAN_ZONE_TYPE_BACKBONE,E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER]:
-        raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'%s not in [%s,%s]'%(zone_type,E3VSWITCH_LAN_ZONE_TYPE_BACKBONE,E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER))
+def invt_register_vswitch_lan_zone(fields_create_dict,user_sync=False,user_timeout=default_user_time):
+    assert('name' in fields_create_dict)
+    assert('zone_type' in fields_create_dict)
+    assert(fields_create_dict['zone_type'] in [E3VSWITCH_LAN_ZONE_TYPE_BACKBONE,E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER])
     base=get_inventory_base()
     assert(base)
-    sub_key=name
-    return base.register_object(root_key,user_sync=user_sync,user_timeout=user_timeout,**args)
+    return base.register_object(root_key,fields_create_dict,user_sync=user_sync,user_timeout=user_timeout)
 
 def invt_update_vswitch_lan_zone(uuid,fields_change_dict,user_sync=False,user_timeout=default_user_time):
     base=get_inventory_base()

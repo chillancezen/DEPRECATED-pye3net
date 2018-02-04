@@ -20,30 +20,20 @@ default_user_time=60
 root_key='vswitch_interface'
 
 
-def invt_register_vswitch_interface(host_id,
-        dev_addr,
-        lanzone_id,
-        iface_status=E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
-        iface_type=E3VSWITCH_INTERFACE_TYPE_SHARED,
-        user_sync=False,
-        user_timeout=default_user_time):
-    if iface_status not in [E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
+def invt_register_vswitch_interface(fields_create_dict,user_sync=False,user_timeout=default_user_time):
+    assert('host_id' in fields_create_dict)
+    assert('dev_address' in fields_create_dict)
+    assert('lanzone_id' in fields_create_dict)
+    if 'interface_status' in fields_create_dict: 
+        assert(fields_create_dict['interface_status'] in  [E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
                                 E3VSWITCH_INTERFACE_STATUS_ACTIVE,
                                 E3VSWITCH_INTERFACE_STATUS_INACTIVE,
-                                E3VSWITCH_INTERFACE_STATUS_MAINTENANCE]:
-        raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'invalid iface_status:%s'%(iface_status))
-    if iface_type not in [E3VSWITCH_INTERFACE_TYPE_SHARED,E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE]:
-        raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'invalid iface_type:%s'%(iface_type))
+                                E3VSWITCH_INTERFACE_STATUS_MAINTENANCE])
+    if 'interface_type' in fields_create_dict:
+        assert(fields_create_dict['interface_type'] in [E3VSWITCH_INTERFACE_TYPE_SHARED,E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE])
     base=get_inventory_base()
     assert(base)
-    args={
-        'host_id':host_id,
-        'lanzone_id':lanzone_id,
-        'dev_addr':dev_addr,
-        'iface_status':iface_status,
-        'iface_type':iface_type
-    }
-    return base.register_object(root_key,user_sync=user_sync,user_timeout=user_timeout,**args)
+    return base.register_object(root_key,fields_create_dict,user_sync=user_sync,user_timeout=user_timeout)
 
 def invt_update_vswitch_interface(iface_uuid,fields_change_dict,user_sync=False,user_timeout=default_user_time):
     base=get_inventory_base()

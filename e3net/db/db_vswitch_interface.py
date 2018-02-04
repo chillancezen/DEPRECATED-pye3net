@@ -69,26 +69,19 @@ class E3VswitchInterface(DB_BASE):
     def to_key(self):
         return str(self.id)
 
-def db_register_e3vswitch_interface(host_id,dev_addr,
-    lanzone_id,
-    iface_status=E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
-    iface_type=E3VSWITCH_INTERFACE_TYPE_SHARED):
+def db_register_e3vswitch_interface(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.host_id==host_id,
-            E3VswitchInterface.dev_address==dev_addr)).first()
+        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.host_id==fields_create_dict['host_id'],
+            E3VswitchInterface.dev_address==fields_create_dict['dev_address'])).first()
         if iface:
             raise e3_exception(E3_EXCEPTION_BE_PRESENT)
         else:
             iface=E3VswitchInterface()
             iface.id=str(uuid4())
-            iface.host_id=host_id
-            iface.dev_address=dev_addr
-            iface.lanzone_id=lanzone_id
-            iface.reference_count=0
-            iface.interface_status=iface_status
-            iface.interface_type=iface_type
+            for field in fields_create_dict:
+                setattr(iface,field,fields_create_dict[field])
             session.add(iface)
             session.commit()
             e3loger.info('registering E3VswitchInterface:%s succeeds'%(iface))
