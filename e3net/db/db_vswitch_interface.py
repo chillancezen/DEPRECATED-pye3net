@@ -2,6 +2,12 @@
 #Copyright (c) 2018 Jie Zheng
 #
 from e3net.common.e3exception import e3_exception
+from e3net.common.e3exception import E3_EXCEPTION_IN_USE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_FOUND
+from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
+from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
+from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
+from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
 from e3net.db.db_base import db_sessions
 from e3net.db.db_base import DB_BASE
 from sqlalchemy import String
@@ -33,7 +39,7 @@ class E3VswitchInterface(DB_BASE):
     __tablename__='vswitch_interface'
     
     id=Column(String(64),primary_key=True)
-    hostname=Column(String(64),ForeignKey('vswitch_host.name'),nullable=False)
+    host_id=Column(String(64),ForeignKey('vswitch_host.id'),nullable=False)
     dev_address=Column(Text,nullable=False)
     interface_status=Column(Enum(E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
             E3VSWITCH_INTERFACE_STATUS_ACTIVE,
@@ -46,85 +52,113 @@ class E3VswitchInterface(DB_BASE):
                 nullable=False,
                 default=E3VSWITCH_INTERFACE_TYPE_SHARED)
     #infrastructure lan zone is the area that the interface is attached to
-    lan_zone=Column(String(64),ForeignKey('vswitch_lan_zone.name'),nullable=False)
+    lanzone_id=Column(String(64),ForeignKey('vswitch_lan_zone.id'),nullable=False)
     reference_count=Column(Integer(),default=0,nullable=False)
 
     def __str__(self):
         ret=dict()
         ret['id']=self.id
-        ret['hostname']=self.hostname
+        ret['host_id']=self.host_id
         ret['dev_address']=self.dev_address
         ret['interface_status']=self.interface_status
         ret['interface_type']=self.interface_type
-        ret['lan_zone']=self.lan_zone
+        ret['lanzone_id']=self.lanzone_id
         ret['reference_count']=self.reference_count
         return str(ret)
-def db_register_e3vswitch_interface(hostname,dev_addr,
-    lan_zone,
+
+    def to_key(self):
+        return str(self.id)
+
+def db_register_e3vswitch_interface(host_id,dev_addr,
+    lanzone_id,
     iface_status=E3VSWITCH_INTERFACE_STATUS_UNKNOWN,
     iface_type=E3VSWITCH_INTERFACE_TYPE_SHARED):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.hostname==hostname,
+        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.host_id==host_id,
             E3VswitchInterface.dev_address==dev_addr)).first()
         if iface:
-            iface.interface_status=iface_status
-            iface.interface_type=iface_type
-            iface.lan_zone=lan_zone
+            raise e3_exception(E3_EXCEPTION_BE_PRESENT)
         else:
             iface=E3VswitchInterface()
             iface.id=str(uuid4())
-            iface.hostname=hostname
+            iface.host_id=host_id
             iface.dev_address=dev_addr
-            iface.lan_zone=lan_zone
+            iface.lanzone_id=lanzone_id
             iface.reference_count=0
             iface.interface_status=iface_status
             iface.interface_type=iface_type
             session.add(iface)
-        session.commit()
-        e3loger.info('register/update E3VswitchInterface:%s'%(iface))
-        return iface
-    except:
+            session.commit()
+            e3loger.info('registering E3VswitchInterface:%s succeeds'%(iface))
+            return iface
+    except Exception as e:
         session.rollback()
-        raise e3_exception('invalid arguments to resgiter an interface')
+        raise e
     finally:
         session.close()
+
+def db_update_e3vswitch_interface(uuid,fields_change_dict):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        iface=session.query(E3VswitchInterface).filter(E3VswitchInterface.id==uuid).first()
+        if not iface:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+        for field in fields_change_dict:
+            if not hasattr(iface,field):
+                raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'%s is not a valid field of E3VswitchInterface'%(field))
+            setattr(iface,field,fields_change_dict[field])
+        session.commit()
+        e3loger.info('update E3VswitchLANZone:%s with change:%s'%(uuid,fields_change_dict))
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
+
 def db_list_e3vswitch_interfaces():
     session=db_sessions[DB_NAME]()
-    lst=None
     try:
         session.begin()
         lst=session.query(E3VswitchInterface).all()
-    except:
-        lst=list()
+        return lst
+    except Exception as e:
         session.rollback()
+        raise e
     finally:
         session.close()
-    return lst
-def db_get_e3vswitch_interface(host,dev_addr):
-    session=db_sessions[DB_NAME]()
-    iface=None
-    try:
-        session.begin()
-        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.hostname==host,E3VswitchInterface.dev_address==dev_addr)).first()
-    except:
-        iface=None
-    finally:
-        session.close()
-    return iface
-def db_unregister_e3vswitch_interface(host,dev_addr):
+
+def db_get_e3vswitch_interface(uuid):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        iface=session.query(E3VswitchInterface).filter(and_(E3VswitchInterface.hostname==host,E3VswitchInterface.dev_address==dev_addr)).first()
-        if iface and iface.reference_count==0:
-            session.delete(iface)
-            session.commit()
-            e3loger.info('unregister E3VswitchInterface:%s'%(iface))
-    except:
+        iface=session.query(E3VswitchInterface).filter(E3VswitchInterface.id==uuid).first()
+        if not iface:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+        return iface 
+    except Exception as e:
         session.rollback()
-        raise e3_exception('make sure interface ref count is zero')
+        raise e
+    finally:
+        session.close()
+
+def db_unregister_e3vswitch_interface(uuid):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        iface=session.query(E3VswitchInterface).filter(E3VswitchInterface.id==uuid).first()
+        if not iface:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+        if iface.reference_count !=0:
+            raise e3_exception(E3_EXCEPTION_IN_USE)
+        session.delete(iface)
+        session.commit()
+        e3loger.info('unregister E3VswitchInterface:%s'%(iface))
+    except Exception as e:
+        session.rollback()
+        raise e
     finally:
         session.close()
                    
@@ -132,5 +166,6 @@ if __name__=='__main__':
     from e3net.db.db_base import init_database
     from e3net.db.db_base import create_database_entries
     from e3net.db.db_vswitch_host import *
+    from e3net.db.db_vswitch_lan_zone import *
     init_database(DB_NAME,'mysql+pymysql://e3net:e3credientials@localhost/E3NET_VSWITCH',True)
-    create_database_entries(DB_NAME)                                                                                                                                                            
+    create_database_entries(DB_NAME)

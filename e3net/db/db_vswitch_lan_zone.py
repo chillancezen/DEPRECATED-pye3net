@@ -80,6 +80,7 @@ def db_update_e3vswitch_lanzone(uuid,fields_change_dict):
                 raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'%s is not a valid field of E3VswitchLANZone'%(field))
             setattr(lanzone,field,fields_change_dict[field])
         session.commit()
+        e3loger.info('update E3VswitchLANZone:%s with change:%s'%(uuid,fields_change_dict))
     except Exception as e:
         session.rollback()
         raise e

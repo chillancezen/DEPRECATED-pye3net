@@ -90,6 +90,7 @@ def db_update_e3vswitch_host(uuid,fields_change_dict):
                 raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT,'%s is not a valid field of E3VswitchHost'%(field))
             setattr(host,field,fields_change_dict[field])
         session.commit()
+        e3loger.info('update E3VswitchHost:%s with change:%s'%(uuid,fields_change_dict))
     except Exception as e:
         session.rollback()
         raise e

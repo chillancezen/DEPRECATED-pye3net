@@ -28,8 +28,10 @@ dispatching_for_registery={
 
 from e3net.db.db_vswitch_host import db_update_e3vswitch_host
 from e3net.db.db_vswitch_lan_zone import db_update_e3vswitch_lanzone
+from e3net.db.db_vswitch_interface import db_update_e3vswitch_interface
 dispatching_for_update={
     'vswitch_host':db_update_e3vswitch_host,
+    'vswitch_interface':db_update_e3vswitch_interface,
     'vswitch_lan_zone':db_update_e3vswitch_lanzone
 }
 
@@ -52,9 +54,7 @@ dispatching_for_deletion={
 }
 sub_key_to_args={
     'vswitch_host':lambda x:{'uuid':x},    
-    #the delimiter is -->,'server-1121-->0000:00:0.2'
-    #or 'server-1121-->eth_pcap0,iface=eth0'
-    'vswitch_interface':lambda x:{'host':x.split('-->')[0],'dev_addr':x.split('-->')[1]},
+    'vswitch_interface':lambda x:{'uuid':x},
     'vswitch_lan_zone':lambda x:{'uuid':x}
 }
 
