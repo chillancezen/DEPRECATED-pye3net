@@ -20,60 +20,69 @@ from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
 from e3net.db.db_vswitch_host import db_register_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_register_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_register_e3vswitch_lanzone
-from e3net.db.db_token import db_register_role
-from e3net.db.db_token import db_register_tenant
+from e3net.db.db_cas_role import db_register_role
+from e3net.db.db_cas_tenant import db_register_tenant
+from e3net.db.db_cas_token import db_register_token
 dispatching_for_registery={
     'vswitch_host':db_register_e3vswitch_host,
     'vswitch_interface':db_register_e3vswitch_interface,
     'vswitch_lan_zone':db_register_e3vswitch_lanzone,
     'role':db_register_role,
-    'tenant':db_register_tenant
+    'tenant':db_register_tenant,
+    'token':db_register_token
 }
 
 from e3net.db.db_vswitch_host import db_update_e3vswitch_host
 from e3net.db.db_vswitch_lan_zone import db_update_e3vswitch_lanzone
 from e3net.db.db_vswitch_interface import db_update_e3vswitch_interface
-from e3net.db.db_token import db_update_role
-from e3net.db.db_token import db_update_tenant
+from e3net.db.db_cas_role import db_update_role
+from e3net.db.db_cas_tenant import db_update_tenant
+from e3net.db.db_cas_token import db_update_token
 dispatching_for_update={
     'vswitch_host':db_update_e3vswitch_host,
     'vswitch_interface':db_update_e3vswitch_interface,
     'vswitch_lan_zone':db_update_e3vswitch_lanzone,
     'role':db_update_role,
-    'tenant':db_update_tenant
+    'tenant':db_update_tenant,
+    'token':db_update_token
 }
 
 from e3net.db.db_vswitch_host import db_get_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_get_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_get_e3vswitch_lanzone
-from e3net.db.db_token import db_get_role
-from e3net.db.db_token import db_get_tenant
+from e3net.db.db_cas_role import db_get_role
+from e3net.db.db_cas_tenant import db_get_tenant
+from e3net.db.db_cas_token import db_get_token
 dispatching_for_retrieval={
     'vswitch_host':db_get_e3vswitch_host,
     'vswitch_interface':db_get_e3vswitch_interface,
     'vswitch_lan_zone':db_get_e3vswitch_lanzone,
     'role':db_get_role,
-    'tenant':db_get_tenant
+    'tenant':db_get_tenant,
+    'token':db_get_token
 }
 
 from e3net.db.db_vswitch_host import db_unregister_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_unregister_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_unregister_e3vswitch_lanzone
-from e3net.db.db_token import db_unregister_role
-from e3net.db.db_token import db_unregister_tenant
+from e3net.db.db_cas_role import db_unregister_role
+from e3net.db.db_cas_tenant import db_unregister_tenant
+from e3net.db.db_cas_token import db_unregister_token
 dispatching_for_deletion={
     'vswitch_host':db_unregister_e3vswitch_host,
     'vswitch_interface':db_unregister_e3vswitch_interface,
     'vswitch_lan_zone':db_unregister_e3vswitch_lanzone,
     'role':db_unregister_role,
-    'tennat':db_unregister_tenant
+    'tennat':db_unregister_tenant,
+    'token':db_unregister_token
 }
 sub_key_to_args={
     'vswitch_host':lambda x:{'uuid':x},    
     'vswitch_interface':lambda x:{'uuid':x},
     'vswitch_lan_zone':lambda x:{'uuid':x},
     'role':lambda x:{'uuid':x},
-    'tenant':lambda x:{'uuid':x}
+    'tenant':lambda x:{'uuid':x},
+    'token':lambda x:{'uuid':x}
 }
 
 
