@@ -23,13 +23,15 @@ from e3net.db.db_vswitch_lan_zone import db_register_e3vswitch_lanzone
 from e3net.db.db_cas_role import db_register_role
 from e3net.db.db_cas_tenant import db_register_tenant
 from e3net.db.db_cas_token import db_register_token
+from e3net.db.db_vswitch_ether_service import db_register_vswitch_ether_service
 dispatching_for_registery={
     'vswitch_host':db_register_e3vswitch_host,
     'vswitch_interface':db_register_e3vswitch_interface,
     'vswitch_lan_zone':db_register_e3vswitch_lanzone,
     'role':db_register_role,
     'tenant':db_register_tenant,
-    'token':db_register_token
+    'token':db_register_token,
+    'ether_service':db_register_vswitch_ether_service
 }
 
 from e3net.db.db_vswitch_host import db_update_e3vswitch_host
@@ -53,13 +55,15 @@ from e3net.db.db_vswitch_lan_zone import db_get_e3vswitch_lanzone
 from e3net.db.db_cas_role import db_get_role
 from e3net.db.db_cas_tenant import db_get_tenant
 from e3net.db.db_cas_token import db_get_token
+from e3net.db.db_vswitch_ether_service import db_get_vswitch_ether_service
 dispatching_for_retrieval={
     'vswitch_host':db_get_e3vswitch_host,
     'vswitch_interface':db_get_e3vswitch_interface,
     'vswitch_lan_zone':db_get_e3vswitch_lanzone,
     'role':db_get_role,
     'tenant':db_get_tenant,
-    'token':db_get_token
+    'token':db_get_token,
+    'ether_service':db_get_vswitch_ether_service
 }
 
 from e3net.db.db_vswitch_host import db_unregister_e3vswitch_host
@@ -68,13 +72,15 @@ from e3net.db.db_vswitch_lan_zone import db_unregister_e3vswitch_lanzone
 from e3net.db.db_cas_role import db_unregister_role
 from e3net.db.db_cas_tenant import db_unregister_tenant
 from e3net.db.db_cas_token import db_unregister_token
+from e3net.db.db_vswitch_ether_service import db_unregiser_vswitch_service
 dispatching_for_deletion={
     'vswitch_host':db_unregister_e3vswitch_host,
     'vswitch_interface':db_unregister_e3vswitch_interface,
     'vswitch_lan_zone':db_unregister_e3vswitch_lanzone,
     'role':db_unregister_role,
     'tenant':db_unregister_tenant,
-    'token':db_unregister_token
+    'token':db_unregister_token,
+    'ether_service':db_unregiser_vswitch_service
 }
 sub_key_to_args={
     'vswitch_host':lambda x:{'uuid':x},    
@@ -82,7 +88,8 @@ sub_key_to_args={
     'vswitch_lan_zone':lambda x:{'uuid':x},
     'role':lambda x:{'uuid':x},
     'tenant':lambda x:{'uuid':x},
-    'token':lambda x:{'uuid':x}
+    'token':lambda x:{'uuid':x},
+    'ether_service':lambda x:{'uuid':x}
 }
 
 
