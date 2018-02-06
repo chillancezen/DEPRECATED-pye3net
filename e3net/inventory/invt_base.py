@@ -73,7 +73,7 @@ dispatching_for_deletion={
     'vswitch_interface':db_unregister_e3vswitch_interface,
     'vswitch_lan_zone':db_unregister_e3vswitch_lanzone,
     'role':db_unregister_role,
-    'tennat':db_unregister_tenant,
+    'tenant':db_unregister_tenant,
     'token':db_unregister_token
 }
 sub_key_to_args={
