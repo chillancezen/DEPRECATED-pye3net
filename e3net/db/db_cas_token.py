@@ -23,7 +23,7 @@ from e3net.common.e3log import get_e3loger
 from uuid import uuid4
 import json
 import hashlib
-from e3net.db.db_cas_tenant import Project as Tenant
+from e3net.db.db_cas_tenant import  Tenant
 
 DB_NAME='E3NET_VSWITCH'
 token_alive_time=30 #token alove in minutes
@@ -33,8 +33,8 @@ e3loger=get_e3loger('e3vswitch_controller')
 class Token(DB_BASE):
     __tablename__='token'
 
-    id=Column(String(64),primary_key=True) # sha1.update(uuid) as token id
-    tenant_id=Column(String(64),ForeignKey('project.id'))#project id is mapped to tenant id
+    id=Column(String(64),primary_key=True)
+    tenant_id=Column(String(64),ForeignKey('tenant.id'))
     created_at=Column(DateTime(),nullable=False,default=datetime.now)
 
     def __str__(self):

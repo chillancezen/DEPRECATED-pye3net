@@ -40,7 +40,7 @@ class E3EtherService(DB_BASE):
     id=Column(String(64),primary_key=True)
     name=Column(String(64),nullable=False)
     service_type=Column(Enum(E3NET_ETHER_SERVICE_TYPE_LINE,E3NET_ETHER_SERVICE_TYPE_LAN),nullable=False)
-    tenant_id=Column(String(64),ForeignKey('project.id'),nullable=False)
+    tenant_id=Column(String(64),ForeignKey('tenant.id'),nullable=False)
     created_at=Column(DateTime(),nullable=False,default=datetime.now)
 
     def __str__(self):

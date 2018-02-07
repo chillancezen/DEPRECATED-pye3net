@@ -17,6 +17,7 @@ from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
 from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
 from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
 
+
 from e3net.db.db_vswitch_host import db_register_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_register_e3vswitch_interface
 from e3net.db.db_vswitch_lan_zone import db_register_e3vswitch_lanzone
@@ -24,6 +25,7 @@ from e3net.db.db_cas_role import db_register_role
 from e3net.db.db_cas_tenant import db_register_tenant
 from e3net.db.db_cas_token import db_register_token
 from e3net.db.db_vswitch_ether_service import db_register_vswitch_ether_service
+from e3net.db.db_vswitch_topology import db_register_vswitch_topology_edge
 dispatching_for_registery={
     'vswitch_host':db_register_e3vswitch_host,
     'vswitch_interface':db_register_e3vswitch_interface,
@@ -31,7 +33,8 @@ dispatching_for_registery={
     'role':db_register_role,
     'tenant':db_register_tenant,
     'token':db_register_token,
-    'ether_service':db_register_vswitch_ether_service
+    'ether_service':db_register_vswitch_ether_service,
+    'topology_edge':db_register_vswitch_topology_edge
 }
 
 from e3net.db.db_vswitch_host import db_update_e3vswitch_host

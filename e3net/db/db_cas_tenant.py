@@ -28,8 +28,8 @@ DB_NAME='E3NET_VSWITCH'
 token_alive_time=30 #token alove in minutes
 e3loger=get_e3loger('e3vswitch_controller')
 
-class Project(DB_BASE):
-    __tablename__='project'
+class Tenant(DB_BASE):
+    __tablename__='tenant'
 
     id=Column(String(64),primary_key=True)
     name=Column(String(64),nullable=False,index=True,unique=True)
@@ -56,17 +56,17 @@ def db_register_tenant(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        project=session.query(Project).filter(Project.name==fields_create_dict['name']).first()
-        if project:
+        tenant=session.query(Tenant).filter(Tenant.name==fields_create_dict['name']).first()
+        if tenant:
             raise e3_exception(E3_EXCEPTION_BE_PRESENT)
-        project=Project()
-        project.id=str(uuid4())
+        tenant=Tenant()
+        tenant.id=str(uuid4())
         for field in fields_create_dict:
-            setattr(project,field,fields_create_dict[field])
-        session.add(project)
+            setattr(tenant,field,fields_create_dict[field])
+        session.add(tenant)
         session.commit()
-        e3loger.info('registering Tenant(Project):%s succeeds'%(project))
-        return project
+        e3loger.info('registering Tenant(Tenant):%s succeeds'%(tenant))
+        return tenant
     except Exception as e:
         session.rollback()
         raise e
@@ -77,15 +77,15 @@ def db_update_tenant(uuid,fields_change_dict):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        project=session.query(Project).filter(Project.id==uuid).first()
-        if not project:
+        tenant=session.query(Tenant).filter(Tenant.id==uuid).first()
+        if not tenant:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
         for field in fields_change_dict:
-            if not hasattr(project,field):
+            if not hasattr(tenant,field):
                 raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT)
-            setattr(project,field,fields_change_dict[field])
+            setattr(tenant,field,fields_change_dict[field])
         session.commit()
-        e3loger.info('update Tenant(Project):%s with change:%s'%(uuid,fields_change_dict))
+        e3loger.info('update Tenant(Tenant):%s with change:%s'%(uuid,fields_change_dict))
     except Exception as e:
         session.rollback()
         raise e
@@ -96,10 +96,10 @@ def db_get_tenant(uuid):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        project=session.query(Project).filter(Project.id==uuid).first()
-        if not project:
+        tenant=session.query(Tenant).filter(Tenant.id==uuid).first()
+        if not tenant:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return project
+        return tenant
     finally:
         session.close()
  
@@ -107,8 +107,8 @@ def db_list_tenants():
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        projects=session.query(Project).all()
-        return projects
+        tenants=session.query(Tenant).all()
+        return tenants
     finally:
         session.close()
     
@@ -116,10 +116,10 @@ def db_unregister_tenant(uuid):
     session=db_sessions[DB_NAME]()
     try:
         session.begin()
-        project=session.query(Project).filter(Project.id==uuid).first()
-        if not project:
+        tenant=session.query(Tenant).filter(Tenant.id==uuid).first()
+        if not tenant:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        session.delete(project)
+        session.delete(tenant)
         session.commit()
     except Exception as e:
         session.rollback()
