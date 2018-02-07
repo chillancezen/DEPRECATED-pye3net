@@ -38,7 +38,7 @@ def invt_get_vswitch_ether_service(service_uuid):
     assert(base)
     return base.get_object(root_key,sub_key)
 
-def invt_list_vswitch_ether_service():
+def invt_list_vswitch_ether_services():
     base=get_inventory_base()
     assert(base)
     return base.list_objects(root_key)

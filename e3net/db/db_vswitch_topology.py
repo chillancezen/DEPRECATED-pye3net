@@ -83,3 +83,37 @@ def db_register_vswitch_topology_edge(fields_create_dict):
     finally:
         session.close()
 
+def db_get_vswitch_topology_edge(uuid):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        edge=session.query(E3TopologyEdge).filter(E3TopologyEdge.id==uuid).first()
+        if not edge:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+        return edge
+    finally:
+        session.close()
+
+def db_list_vswitch_topology_edges():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        edges=session.query(E3TopologyEdge).all()
+        return edges
+    finally:
+        session.close()
+
+def db_unregister_vswitch_topology_edge(uuid):
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        edge=session.query(E3TopologyEdge).filter(E3TopologyEdge.id==uuid).first()
+        if not edge:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+        session.delete(edge)
+        session.commit()
+    except Exception as e:
+        session.rollback()
+        raise e
+    finally:
+        session.close()
