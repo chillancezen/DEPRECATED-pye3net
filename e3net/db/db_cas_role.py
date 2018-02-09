@@ -23,6 +23,9 @@ from e3net.common.e3log import get_e3loger
 from uuid import uuid4
 import json
 import hashlib
+from e3net.common.e3keeper import root_keeper
+from e3net.db.db_base import register_database_load_entrance
+
 DB_NAME='E3NET_VSWITCH'
 token_alive_time=30 #token alove in minutes
 e3loger=get_e3loger('e3vswitch_controller')
@@ -44,7 +47,25 @@ class Role(DB_BASE):
 
     def to_key(self):
         return str(self.id)
-    
+
+    def clone(self):
+        c=Role()
+        c.id=self.id
+        c.name=self.name
+        c.description=self.description
+        c.is_admin=self.is_admin
+        return c
+def load_roles_from_db():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        roles=session.query(Role).all()
+        for role in roles:
+            root_keeper.set('role',role.id,role.clone())
+    finally:
+        session.close()
+register_database_load_entrance('role',load_roles_from_db)
+
 def db_register_role(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
@@ -60,7 +81,7 @@ def db_register_role(fields_create_dict):
             session.add(role)
             session.commit()
             e3loger.info('registering role:%s succeeds'%(str(role)))
-            return role
+            return role.clone()
     except Exception as e:
         session.rollback()
         raise e
@@ -91,7 +112,7 @@ def db_list_roles():
     try:
         session.begin()
         roles=session.query(Role).all()
-        return roles
+        return [role.clone() for role in roles]
     except Exception as e:
         session.rollback()
         raise e
@@ -105,7 +126,7 @@ def db_get_role(uuid):
         role=session.query(Role).filter(Role.id==uuid).first()
         if not role:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return role
+        return role.clone()
     except Exception as e:
         raise e
     finally:

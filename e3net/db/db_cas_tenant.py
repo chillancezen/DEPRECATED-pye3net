@@ -23,6 +23,8 @@ from e3net.common.e3log import get_e3loger
 from uuid import uuid4
 import json
 import hashlib
+from e3net.common.e3keeper import root_keeper
+from e3net.db.db_base import register_database_load_entrance
 
 DB_NAME='E3NET_VSWITCH'
 token_alive_time=30 #token alove in minutes
@@ -51,6 +53,27 @@ class Tenant(DB_BASE):
     def to_key(self):
         return str(self.id)
 
+    def clone(self):
+        c=Tenant()
+        c.id=self.id
+        c.name=self.name
+        c.passwd=self.passwd
+        c.description=self.description
+        c.enabled=self.enabled
+        c.role_id=self.role_id
+        return c
+
+def load_tenants_from_db():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        tenants=session.query(Tenant).all()
+        for tenant in tenants:
+            root_keeper.set('tenant',tenant.id,tenant.clone())
+    finally:
+        session.close()
+
+register_database_load_entrance('tenant',load_tenants_from_db)
 
 def db_register_tenant(fields_create_dict):
     session=db_sessions[DB_NAME]()
@@ -66,7 +89,7 @@ def db_register_tenant(fields_create_dict):
         session.add(tenant)
         session.commit()
         e3loger.info('registering Tenant(Tenant):%s succeeds'%(tenant))
-        return tenant
+        return tenant.clone()
     except Exception as e:
         session.rollback()
         raise e
@@ -99,7 +122,7 @@ def db_get_tenant(uuid):
         tenant=session.query(Tenant).filter(Tenant.id==uuid).first()
         if not tenant:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return tenant
+        return tenant.clone()
     finally:
         session.close()
  
@@ -108,7 +131,7 @@ def db_list_tenants():
     try:
         session.begin()
         tenants=session.query(Tenant).all()
-        return tenants
+        return [tenant.clone() for tenant in tenants]
     finally:
         session.close()
     

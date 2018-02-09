@@ -20,6 +20,8 @@ from sqlalchemy import and_
 from uuid import uuid4
 from e3net.common.e3log import get_e3loger
 import traceback
+from e3net.common.e3keeper import root_keeper
+from e3net.db.db_base import register_database_load_entrance
 
 e3loger=get_e3loger('e3vswitch_controller')
 
@@ -69,6 +71,29 @@ class E3VswitchInterface(DB_BASE):
     def to_key(self):
         return str(self.id)
 
+    def clone(self):
+        c=E3VswitchInterface()
+        c.id=self.id
+        c.host_id=self.host_id
+        c.dev_address=self.dev_address
+        c.interface_status=self.interface_status
+        c.interface_type=self.interface_type
+        c.lanzone_id=self.lanzone_id
+        c.reference_count=self.reference_count
+        return c
+
+def load_e3vswitch_interfaces_from_db():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        ifaces=session.query(E3VswitchInterface).all()
+        for iface in ifaces:
+            root_keeper.set('vswitch_interface',iface.id,iface.clone())
+    finally:
+        session.close()
+
+register_database_load_entrance('vswitch_interface',load_e3vswitch_interfaces_from_db)
+
 def db_register_e3vswitch_interface(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
@@ -85,7 +110,7 @@ def db_register_e3vswitch_interface(fields_create_dict):
             session.add(iface)
             session.commit()
             e3loger.info('registering E3VswitchInterface:%s succeeds'%(iface))
-            return iface
+            return iface.clone()
     except Exception as e:
         session.rollback()
         raise e
@@ -116,7 +141,7 @@ def db_list_e3vswitch_interfaces():
     try:
         session.begin()
         lst=session.query(E3VswitchInterface).all()
-        return lst
+        return [iface.clone() for iface in lst]
     except Exception as e:
         session.rollback()
         raise e
@@ -130,7 +155,7 @@ def db_get_e3vswitch_interface(uuid):
         iface=session.query(E3VswitchInterface).filter(E3VswitchInterface.id==uuid).first()
         if not iface:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return iface 
+        return iface.clone()
     except Exception as e:
         session.rollback()
         raise e
@@ -154,11 +179,3 @@ def db_unregister_e3vswitch_interface(uuid):
         raise e
     finally:
         session.close()
-                   
-if __name__=='__main__':
-    from e3net.db.db_base import init_database
-    from e3net.db.db_base import create_database_entries
-    from e3net.db.db_vswitch_host import *
-    from e3net.db.db_vswitch_lan_zone import *
-    init_database(DB_NAME,'mysql+pymysql://e3net:e3credientials@localhost/E3NET_VSWITCH',True)
-    create_database_entries(DB_NAME)

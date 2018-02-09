@@ -24,7 +24,8 @@ from uuid import uuid4
 
 from e3net.common.e3log import get_e3loger
 import traceback
-
+from e3net.common.e3keeper import root_keeper
+from e3net.db.db_base import register_database_load_entrance
 
 e3loger=get_e3loger('e3vswitch_controller')
 
@@ -55,6 +56,27 @@ class E3EtherService(DB_BASE):
     def to_key(self):
         return str(self.id)
 
+    def clone(self):
+        c=E3EtherService()
+        c.id=self.id
+        c.name=self.name
+        c.service_type=self.service_type
+        c.tenant_id=self.tenant_id
+        c.created_at=self.created_at
+        return c
+
+def laod_ether_services_from_db():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        services=session.query(E3EtherService).all()
+        for svc in services:
+            root_keeper.set('ether_service',svc.id,svc.clone())
+    finally:
+        session.close()
+
+register_database_load_entrance('ether_service',laod_ether_services_from_db)
+
 def db_register_vswitch_ether_service(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
@@ -66,7 +88,7 @@ def db_register_vswitch_ether_service(fields_create_dict):
         session.add(service)
         session.commit()
         e3loger.info('registering E3EtherService:%s succeeds'%(service))
-        return service
+        return service.clone()
     except Exception as e:
         session.rollback()
         raise e
@@ -80,7 +102,7 @@ def db_get_vswitch_ether_service(uuid):
         service=session.query(E3EtherService).filter(E3EtherService.id==uuid).first()
         if not service:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return service
+        return service.clone()
     finally:
         session.close()
 
@@ -89,7 +111,7 @@ def db_list_vswitch_ether_services():
     try:
         session.begin()
         services=session.query(E3EtherService).all()
-        return services
+        return [svc.clone() for svc in services]
     finally:
         session.close()
 

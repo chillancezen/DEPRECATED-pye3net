@@ -24,6 +24,8 @@ from uuid import uuid4
 import json
 import hashlib
 from e3net.db.db_cas_tenant import  Tenant
+from e3net.common.e3keeper import root_keeper
+from e3net.db.db_base import register_database_load_entrance
 
 DB_NAME='E3NET_VSWITCH'
 token_alive_time=30 #token alove in minutes
@@ -47,6 +49,23 @@ class Token(DB_BASE):
     def to_key(self):
         return str(self.id)
 
+    def clone(self):
+        c=Token()
+        c.id=self.id
+        c.tenant_id=self.tenant_id
+        c.created_at=self.created_at
+        return c
+def load_tokens_from_db():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        tokens=session.query(Token).all()
+        for token in tokens:
+            root_keeper.set('token',token.id,token.clone())
+    finally:
+        session.close()
+
+register_database_load_entrance('token',load_tokens_from_db)
 
 def db_register_token(fields_create_dict):
     session=db_sessions[DB_NAME]()
@@ -63,7 +82,7 @@ def db_register_token(fields_create_dict):
         session.add(token)
         session.commit()
         e3loger.info('registering Token:%s succeeds'%(token))
-        return token
+        return token.clone()
     except Exception as e:
         session.rollback()
         raise e
@@ -92,7 +111,7 @@ def db_get_token(uuid):
         token=session.query(Token).filter(Token.id==uuid).first()
         if not token:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return token
+        return token.clone()
     except Exception as e:
         raise e
     finally:
@@ -103,7 +122,7 @@ def db_list_tokens():
     try:
         session.begin()
         lst=session.query(Token).all()
-        return lst
+        return [token.clone() for token in lst]
     except Exception as e:
         raise e
     finally:

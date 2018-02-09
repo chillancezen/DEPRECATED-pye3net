@@ -19,6 +19,8 @@ from sqlalchemy import ForeignKey
 from uuid import uuid4
 from e3net.common.e3log import get_e3loger
 import traceback
+from e3net.common.e3keeper import root_keeper
+from e3net.db.db_base import register_database_load_entrance
 
 e3loger=get_e3loger('e3vswitch_controller')
 
@@ -47,6 +49,25 @@ class E3VswitchLANZone(DB_BASE):
     def to_key(self):
         return str(self.id)
 
+    def clone(self):
+        c=E3VswitchLANZone()
+        c.id=self.id
+        c.name=self.name
+        c.zone_type=self.zone_type
+        return c
+
+def load_e3switch_lanzone_from_db():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        lanzones=session.query(E3VswitchLANZone).all()
+        for lanzone in lanzones:
+            root_keeper.set('vswitch_lan_zone',lanzone.id,lanzone.clone())
+    finally:
+        session.close()
+
+register_database_load_entrance('vswitch_lan_zone',load_e3switch_lanzone_from_db)
+
 def db_register_e3vswitch_lanzone(fields_create_dict):
     session=db_sessions[DB_NAME]()
     try:
@@ -62,7 +83,7 @@ def db_register_e3vswitch_lanzone(fields_create_dict):
             session.add(lanzone)
             session.commit()
             e3loger.info('registering lanzone:%s succeeds'%(lanzone))
-            return lanzone
+            return lanzone.clone()
     except Exception as e:
         session.rollback()
         raise e
@@ -93,7 +114,7 @@ def db_list_e3vswitch_lanzones():
     try:
         session.begin()
         lst=session.query(E3VswitchLANZone).all()
-        return lst
+        return [zone.clone() for zone in lst]
     except Exception as e:
         session.rollback()
         raise e
@@ -108,7 +129,7 @@ def db_get_e3vswitch_lanzone(uuid):
         lanzone=session.query(E3VswitchLANZone).filter(E3VswitchLANZone.id==uuid).first()
         if not lanzone:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return lanzone 
+        return lanzone.clone()
     except Exception as e:
         session.rollback()
         raise e

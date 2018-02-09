@@ -24,6 +24,9 @@ from sqlalchemy import or_
 from datetime import datetime
 from uuid import uuid4
 from e3net.common.e3log import get_e3loger
+from e3net.common.e3keeper import root_keeper
+from e3net.db.db_base import register_database_load_entrance
+
 DB_NAME='E3NET_VSWITCH'
 e3loger=get_e3loger('e3vswitch_controller')
 
@@ -55,6 +58,17 @@ class E3TopologyEdge(DB_BASE):
         edge.interface1=self.interface1
         edge.service_id=self.service_id
         return edge
+
+def load_vswitch_topology_edges_from_db():
+    session=db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        edges=session.query(E3TopologyEdge).all()
+        for edge in edges:
+            root_keeper.set('topology_edge',edge.id,edge.clone())
+    finally:
+        session.close()
+register_database_load_entrance('topology_edge',load_vswitch_topology_edges_from_db)
 
 def db_register_vswitch_topology_edge(fields_create_dict):
     session=db_sessions[DB_NAME]()
@@ -90,7 +104,7 @@ def db_get_vswitch_topology_edge(uuid):
         edge=session.query(E3TopologyEdge).filter(E3TopologyEdge.id==uuid).first()
         if not edge:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
-        return edge
+        return edge.clone()
     finally:
         session.close()
 
@@ -99,7 +113,7 @@ def db_list_vswitch_topology_edges():
     try:
         session.begin()
         edges=session.query(E3TopologyEdge).all()
-        return edges
+        return [edge.clone() for edge in edges]
     finally:
         session.close()
 
