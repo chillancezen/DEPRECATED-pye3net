@@ -7,6 +7,7 @@ from e3net.common.e3keeper import root_keeper
 from pysyncobj import SyncObj
 from pysyncobj import SyncObjConf
 from pysyncobj import replicated
+from e3net.common.e3rwlock import e3rwlock
 from e3net.common.e3log import get_e3loger
 from e3net.common.e3config import get_config
 from e3net.common.e3exception import e3_exception
@@ -16,7 +17,8 @@ from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
 from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
 from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
 from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
-
+from e3net.common.e3exception import E3_EXCEPTION_NOT_SUCCESSFUL
+from e3net.common.e3exception import E3_EXCEPTION_NOT_READY
 
 from e3net.db.db_vswitch_host import db_register_e3vswitch_host
 from e3net.db.db_vswitch_interface import db_register_e3vswitch_interface
@@ -119,8 +121,9 @@ class inventory_base(SyncObj):
     def __init__(self,selfaddr,otheraddress,conf=None):
         #a dictionary which contains tuple <locakpath,expiry-time>
         self._locks=dict()
+        self._lock_native_guard=e3rwlock()
         super(inventory_base,self).__init__(selfaddr,otheraddress,conf)
-    
+
     #put an event into the event backlog quuee
     @replicated
     def notify_event(self,event):
@@ -289,37 +292,65 @@ class inventory_base(SyncObj):
     #
     @replicated
     def acquire_lock(self,lock_path,caller_id,current_time,lock_duration):
-        lock=self._locks.get(lock_path,None)
-        lock_id=None
-        expiry_time=0
-        #release previous in case of expiry
-        if lock:
-            lock_id,expiry_time=lock
-            if expiry_time<current_time:
-                lock=None
-        if not lock or lock_id==caller_id:
-            self._locks[lock_path]=(caller_id,current_time+lock_duration)
+        try:
+            self._lock_native_guard.write_lock()
+            lock=self._locks.get(lock_path,None)
+            lock_id=None
+            expiry_time=0
+            #release previous in case of expiry
+            if lock:
+                lock_id,expiry_time=lock
+                if expiry_time<current_time:
+                    lock=None
+            if not lock or lock_id==caller_id:
+                self._locks[lock_path]=(caller_id,current_time+lock_duration)
+            else:
+                raise e3_exception(E3_EXCEPTION_NOT_SUCCESSFUL)
             return True
-        return False
-    def is_locked(self,lock_path,caller_id,current_time):
-        lock=self._locks.get(lock_path,None)
-        if lock:
-            lock_id,expiry_time=lock
-            if lock_id==caller_id and expiry_time >current_time:
-                return True
-        return False
+        except Exception as e:
+            e3loger.debug('failed to lock:%s as caller_id:%s with exception:%s'%(lock_path,caller_id,str(e)))
+            return False
+        finally:
+            self._lock_native_guard.write_unlock()
 
+    #
+    #if no exception was raised, the lock_path is acquired,
+    #otherwise an E3_EXCEPTION_NOT_READY exception was thrown
+    def is_locked(self,lock_path,caller_id,current_time):
+        try:
+            self._lock_native_guard.read_lock()
+            lock=self._locks.get(lock_path,None)
+            if lock:
+                lock_id,expiry_time=lock
+                if lock_id==caller_id and expiry_time >current_time:
+                    return True
+            raise e3_exception(E3_EXCEPTION_NOT_READY)
+        except:
+            return False
+        finally:
+            self._lock_native_guard.read_unlock()
+
+    #
+    #no exception is exposed
+    #it's is supposed to be always successful
+    #the returned value usually has significent meaning
     @replicated
     def release_lock(self,lock_path,caller_id):
-        lock=self._locks.get(lock_path,None)
-        if not lock:
-            return True
-        lock_id,expiry_time=lock
-        if lock_id == caller_id:
-            del self._locks[lock_path]
-            return True
-        return False
-            
+        try:
+            self._lock_native_guard.write_lock()
+            lock=self._locks.get(lock_path,None)
+            if not lock:
+                return False
+            lock_id,expiry_time=lock
+            if lock_id == caller_id:
+                del self._locks[lock_path]
+                return True
+            return False
+        except Exception as e:
+            return False
+        finally:
+            self._lock_native_guard.write_unlock()
+
 invt_base=None
 def e3inventory_base_init():
     global invt_base
