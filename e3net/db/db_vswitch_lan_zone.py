@@ -38,12 +38,16 @@ class E3VswitchLANZone(DB_BASE):
             E3VSWITCH_LAN_ZONE_TYPE_BACKBONE),
                 nullable=False,
                 default=E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER)
+    min_vlan=Column(Integer(),default=1,nullable=False)
+    max_vlan=Column(Integer(),default=4095,nullable=False)
 
     def __str__(self):
         ret=dict()
         ret['id']=self.id
         ret['name']=self.name
         ret['zone_type']=self.zone_type
+        ret['min_vlan']=self.min_vlan
+        ret['max_vlan']=self.max_vlan
         return str(ret)
 
     def to_key(self):
@@ -54,6 +58,8 @@ class E3VswitchLANZone(DB_BASE):
         c.id=self.id
         c.name=self.name
         c.zone_type=self.zone_type
+        c.min_vlan=self.min_vlan
+        c.max_vlan=self.max_vlan
         return c
 
 def load_e3switch_lanzone_from_db():

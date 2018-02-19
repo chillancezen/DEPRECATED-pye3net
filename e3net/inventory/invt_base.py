@@ -28,6 +28,7 @@ from e3net.db.db_cas_tenant import db_register_tenant
 from e3net.db.db_cas_token import db_register_token
 from e3net.db.db_vswitch_ether_service import db_register_vswitch_ether_service
 from e3net.db.db_vswitch_topology import db_register_vswitch_topology_edge
+from e3net.db.db_vswitch_ether_service_vlan import db_register_vswitch_ether_service_vlan
 dispatching_for_registery={
     'vswitch_host':db_register_e3vswitch_host,
     'vswitch_interface':db_register_e3vswitch_interface,
@@ -36,7 +37,8 @@ dispatching_for_registery={
     'tenant':db_register_tenant,
     'token':db_register_token,
     'ether_service':db_register_vswitch_ether_service,
-    'topology_edge':db_register_vswitch_topology_edge
+    'topology_edge':db_register_vswitch_topology_edge,
+    'ether_service_vlan':db_register_vswitch_ether_service_vlan
 }
 
 from e3net.db.db_vswitch_host import db_update_e3vswitch_host
@@ -62,6 +64,7 @@ from e3net.db.db_cas_tenant import db_get_tenant
 from e3net.db.db_cas_token import db_get_token
 from e3net.db.db_vswitch_ether_service import db_get_vswitch_ether_service
 from e3net.db.db_vswitch_topology import db_get_vswitch_topology_edge
+from e3net.db.db_vswitch_ether_service_vlan import db_get_vswitch_ether_service_vlan
 dispatching_for_retrieval={
     'vswitch_host':db_get_e3vswitch_host,
     'vswitch_interface':db_get_e3vswitch_interface,
@@ -70,7 +73,8 @@ dispatching_for_retrieval={
     'tenant':db_get_tenant,
     'token':db_get_token,
     'ether_service':db_get_vswitch_ether_service,
-    'topology_edge':db_get_vswitch_topology_edge
+    'topology_edge':db_get_vswitch_topology_edge,
+    'ether_service_vlan':db_get_vswitch_ether_service_vlan
 }
 
 from e3net.db.db_vswitch_host import db_unregister_e3vswitch_host
@@ -81,6 +85,7 @@ from e3net.db.db_cas_tenant import db_unregister_tenant
 from e3net.db.db_cas_token import db_unregister_token
 from e3net.db.db_vswitch_ether_service import db_unregiser_vswitch_service
 from e3net.db.db_vswitch_topology import db_unregister_vswitch_topology_edge
+from e3net.db.db_vswitch_ether_service_vlan import db_unregister_vswitch_ether_service_vlan
 dispatching_for_deletion={
     'vswitch_host':db_unregister_e3vswitch_host,
     'vswitch_interface':db_unregister_e3vswitch_interface,
@@ -89,7 +94,8 @@ dispatching_for_deletion={
     'tenant':db_unregister_tenant,
     'token':db_unregister_token,
     'ether_service':db_unregiser_vswitch_service,
-    'topology_edge':db_unregister_vswitch_topology_edge
+    'topology_edge':db_unregister_vswitch_topology_edge,
+    'ether_service_vlan':db_unregister_vswitch_ether_service_vlan
 }
 sub_key_to_args={
     'vswitch_host':lambda x:{'uuid':x},    
@@ -99,7 +105,8 @@ sub_key_to_args={
     'tenant':lambda x:{'uuid':x},
     'token':lambda x:{'uuid':x},
     'ether_service':lambda x:{'uuid':x},
-    'topology_edge':lambda x:{'uuid':x}
+    'topology_edge':lambda x:{'uuid':x},
+    'ether_service_vlan':lambda x:{'uuid':x}
 }
 
 
