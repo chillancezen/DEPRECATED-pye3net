@@ -34,6 +34,8 @@ DB_NAME='E3NET_VSWITCH'
 E3NET_ETHER_SERVICE_TYPE_LINE='e-line'
 E3NET_ETHER_SERVICE_TYPE_LAN='e-lan'
 
+E3NET_ETHER_SERVICE_LINK_SHARED='shared'
+E3NET_ETHER_SERVICE_LINK_EXCLUSIVE='exclusive'
 
 class E3EtherService(DB_BASE):
     __tablename__='ether_service'
@@ -43,6 +45,7 @@ class E3EtherService(DB_BASE):
     service_type=Column(Enum(E3NET_ETHER_SERVICE_TYPE_LINE,E3NET_ETHER_SERVICE_TYPE_LAN),nullable=False)
     tenant_id=Column(String(64),ForeignKey('tenant.id'),nullable=False)
     created_at=Column(DateTime(),nullable=False,default=datetime.now)
+    link_type=Column(Enum(E3NET_ETHER_SERVICE_LINK_SHARED,E3NET_ETHER_SERVICE_LINK_EXCLUSIVE),nullable=False,default=E3NET_ETHER_SERVICE_LINK_SHARED)
 
     def __str__(self):
         ret=dict()
@@ -51,6 +54,7 @@ class E3EtherService(DB_BASE):
         ret['service_type']=self.service_type
         ret['tenant_id']=self.tenant_id
         ret['created_at']=self.created_at.ctime()
+        ret['link_type']=self.link_type
         return str(ret)
 
     def to_key(self):
@@ -63,6 +67,7 @@ class E3EtherService(DB_BASE):
         c.service_type=self.service_type
         c.tenant_id=self.tenant_id
         c.created_at=self.created_at
+        c.link_type=self.link_type
         return c
 
 def laod_ether_services_from_db():
