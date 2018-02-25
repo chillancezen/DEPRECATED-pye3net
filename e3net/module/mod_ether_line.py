@@ -13,36 +13,225 @@ from e3net.module.mod_common import EtherServiceCreateConfig
 from e3net.inventory.invt_vswitch_lan_zone import invt_get_vswitch_lan_zone
 from e3net.inventory.invt_vswitch_host import invt_get_vswitch_host
 from e3net.inventory.invt_vswitch_interface import invt_get_vswitch_interface
-
+from e3net.inventory.invt_vswitch_ether_service import invt_get_vswitch_ether_service
+from e3net.inventory.invt_vswitch_lan_zone import invt_list_vswitch_lan_zones
+from e3net.inventory.invt_vswitch_interface import invt_list_vswitch_interfaces
+from e3net.inventory.invt_vswitch_host import invt_list_vswitch_hosts
+from e3net.inventory.invt_vswitch_topology_edge import invt_list_vswitch_topology_edges
+from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_LINK_SHARED
+from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_LINK_EXCLUSIVE
+from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_SHARED
+from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
+from e3net.common.e3log import get_e3loger
+e3loger=get_e3loger('e3vswitch_controller')
 #
 #make sure
 #   'service_id' in iResult is prepared
 #this phase will prepare lanzones/hosts/interfaces in iResult
-#
+#and remove any duplicated items
 def _prefetch_create_config(config,iResult):
+    iResult['ether_service']=invt_get_vswitch_ether_service(iResult['service_id'])
     assert(len(config['initial_lanzones']))
     #prepare all essential object
     #this will remove those duplicated ITEM. and may raise an exception if not found
     iResult['initial_lanzones']=dict()
     for l in config['initial_lanzones']:
         iResult['initial_lanzones'][l]=invt_get_vswitch_lan_zone(l)
+    e3loger.debug('initial lanzones:%s'%(iResult['initial_lanzones']))
+
     iResult['ban_hosts']=dict()
     for h in config['ban_hosts']:
         iResult['ban_hosts'][h]=invt_get_vswitch_hosth(h)
+    e3loger.debug('banned hosts:%s'%(iResult['ban_hosts']))
+
     iResult['ban_lanzones']=dict()
     for l in config['ban_lanzones']:
         iResult['ban_lanzones'][l]=invt_get_vswitch_lan_zone(l)
+    e3loger.debug('banned lanzones:%s'%(iResult['ban_lanzones']))
+
     iResult['ban_interfaces']=dict()
     for i in config['ban_interfaces']:
         iResult['ban_interfaces'][i]=invt_get_vswitch_interface(i)
+    e3loger.debug('banned interfaces:%s'%(iResult['ban_interfaces']))
     #make sure initial_lanzones do not overlap with ban_lanzones
     bl=iResult['ban_lanzones'].keys()
-    for il in iResult['ban_lanzones'].keys():
+    for il in iResult['initial_lanzones'].keys():
          if il in bl:
             raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT)
 
-
+def _do_creating_topology(config,iResult):
+    #if it's a solo customer lan zone,it's a NULL graphic
+    if len(iResult['initial_lanzones'])==1:
+        return
+    assert(len(iResult['initial_lanzones'])==2)
+    assert(len(config['initial_lanzones'])==2)
+    e_line=iResult['ether_service']
+    #
+    #using Dijkstra Algorithm to determine the shortest path
+    #between the two customer lan zones.
+    #
+    #let the tuple lanzone_id:<downstream_iface,host(vswitch),upstream_iface> to 
+    #denote the lanzone-2-lanzone graphic edge
+    lanzones=invt_list_vswitch_lan_zones()
+    hosts=invt_list_vswitch_hosts()
+    interfaces=invt_list_vswitch_interfaces()
+    edges=invt_list_vswitch_topology_edges()
+    iface_weight=dict()
+    permanent_lanzone_set=dict()
+    permanent_host_set=set()
+    start_lanzone=config['initial_lanzones'][0]
+    end_lanzone=config['initial_lanzones'][1]
+    
+    #
+    #initialize the edge's weight
+    #and calculate the weight of these interfaces which are already in the topology
+    for iface_id in interfaces:
+        iface_weight[iface_id]=0
+    for edge_id in edges:
+        edge=edges[edge_id]
+        iface0=edge.interface0
+        iface1=edge.interface1
+        iface_weight[iface0]=iface_weight[iface0]+1
+        iface_weight[iface1]=iface_weight[iface1]+1
+    #
+    #remove the banned lanzones
+    #
+    for banned_lanzone in iResult['ban_lanzones']:
+        assert(banned_lanzone in lanzones)
+        del lanzones[banned_lanzone]
+        e3loger.debug('banned lanzone:',banned_lanzone)
+    #
+    #remove the banned hosts
+    #
+    for banned_host in iResult['ban_hosts']:
+        assert(banded_host in hosts)
+        del hosts[banded_host]
+        e3loger.debug('banned host:',banded_host)
+    #
+    #remove the banned Interface
+    #
+    for banned_iface in iResult['ban_interfaces']:
+        assert(banned_iface in interfaces)
+        del interfaces[banned_iface]
+        e3loger.debug('banned interface:',banned_iface)
+    #
+    #to improve the efficiency to search interfaces with lanzone/host
+    #split interfaces list into these two maps. note this will ve used several times
+    #
+    lanzone_2_iface=dict()
+    host_2_iface=dict()
+    for _iface_id in interfaces:
+        iface=interfaces[_iface_id]
+        lanzone_id=iface.lanzone_id
+        host_id=iface.host_id
+        if lanzone_id not in lanzone_2_iface:
+            lanzone_2_iface[lanzone_id]=set()
+        assert(lanzone_id in lanzone_2_iface)
+        lanzone_2_iface[lanzone_id].add(_iface_id)
+        if host_id not in host_2_iface:
+            host_2_iface[host_id]=set()
+        assert(host_id in host_2_iface)
+        host_2_iface[host_id].add(_iface_id)
+    #
+    #initialize the permanent set
+    #
+    permanent_lanzone_set[start_lanzone]=(None,None,None)
+    #
+    #initialize the path weight array
+    #
+    infinite_weight=0x7fffffff
+    path_weight=dict()
+    for _lanzone_id in lanzones:
+        if _lanzone_id==start_lanzone:
+            path_weight[_lanzone_id]=0
+        else:
+            path_weight[_lanzone_id]=infinite_weight
+    #
+    #main loop to find shortest path fpr E-LINE service
+    #
+    while True:
+        next_iface0_id=None
+        next_iface1_id=None
+        next_host_id=None
+        next_lanzone_id=None
+        prev_lanzone_id=None
+        for p_lanzone_id in permanent_lanzone_set:
+            #find the possible hosts in the path, and record their weight along with interfaces
+            print('pset lanzone_id:',p_lanzone_id)
+            intermediate_host=dict() 
+            for _iface_id in lanzone_2_iface[p_lanzone_id]:
+                iface=interfaces[_iface_id]
+                if iface.host_id in permanent_host_set:
+                    continue
+                if e_line.link_type==E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
+                    if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
+                        iface_weight[_iface_id]!=0:
+                        continue
+                else:
+                    if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_SHARED:
+                        continue
+                if iface.host_id not in intermediate_host:
+                    intermediate_host[iface.host_id]=_iface_id
+                elif iface_weight[_iface_id]<iface_weight[intermediate_host[iface.host_id]]:
+                    intermediate_host[iface.host_id]=_iface_id
+            print('intermediate_host:',intermediate_host)
+            #until now, the first part of the edge composition is finished
+            #next ro do is to find the possible next lanzone in the path
+            intermediate_lanzone=dict()
+            for _host_id in intermediate_host:
+                assert(_host_id not in permanent_host_set)
+                host=hosts[_host_id]
+                for _iface_id in host_2_iface[_host_id]:
+                    iface=interfaces[_iface_id]
+                    if iface.lanzone_id in permanent_lanzone_set:
+                        continue
+                    if e_line.link_type==E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
+                        if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
+                            iface_weight[_iface_id]!=0:
+                            continue
+                    else:
+                        if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_SHARED:
+                            continue
+                    if iface.lanzone_id not in intermediate_lanzone:
+                        intermediate_lanzone[iface.lanzone_id]=(_iface_id,_host_id,intermediate_host[_host_id])
+                    elif iface_weight[_iface_id]+iface_weight[intermediate_host[_host_id]]< \
+                        iface_weight[intermediate_lanzone[iface.lanzone_id][0]]+ \
+                        iface_weight[intermediate_lanzone[iface.lanzone_id][2]]:
+                        intermediate_lanzone[iface.lanzone_id]=(_iface_id,_host_id,intermediate_host[_host_id])
+            print('intermediate_lanzone:',intermediate_lanzone)
+            #until now, thetopology weight is known,let's caculate the path weight to determine the shortest path
+            for _lanzone_id in intermediate_lanzone:
+                iface0_id=intermediate_lanzone[_lanzone_id][0]
+                host_id=intermediate_lanzone[_lanzone_id][1]
+                iface1_id=intermediate_lanzone[_lanzone_id][2]
+                iface1=interfaces[iface1_id]
+                edge_weight=iface_weight[iface0_id]+iface_weight[iface1_id]
+                _prev_lanzone_id=iface1.lanzone_id
+                if next_lanzone_id==None:
+                    next_iface0_id=iface0_id
+                    next_iface1_id=iface1_id
+                    next_host_id=host_id
+                    next_lanzone_id=_lanzone_id
+                    prev_lanzone_id=_prev_lanzone_id
+                elif path_weight[_prev_lanzone_id]+edge_weight< \
+                    path_weight[prev_lanzone_id]+iface_weight[next_iface0_id]+iface_weight[next_iface1_id]:
+                    next_iface0_id=iface0_id
+                    next_iface1_id=iface1_id
+                    next_host_id=host_id
+                    next_lanzone_id=_lanzone_id
+                    prev_lanzone_id=_prev_lanzone_id
+        if not next_lanzone_id:
+            break
+        #update permanent lanzone/host set
+        permanent_host_set.add(next_host_id)
+        permanent_lanzone_set[next_lanzone_id]=(next_iface0_id,next_host_id,next_iface1_id)
+        path_weight[next_lanzone_id]=path_weight[prev_lanzone_id]+iface_weight[next_iface0_id]+iface_weight[next_iface1_id]
+        print('permanent_host_set.add(next_host_id):',next_host_id)
+        print('permanent_lanzone_set[next_lanzone_id]:',permanent_lanzone_set[next_lanzone_id])
+    print(start_lanzone,end_lanzone,permanent_lanzone_set)
+    for i in permanent_lanzone_set:
+        print(i,permanent_lanzone_set[i]) 
 def create_ether_line_topology(config,iResult):
-    assert('service_id' in iResult)
     _prefetch_create_config(config,iResult)
-
+    _do_creating_topology(config,iResult)
+    
