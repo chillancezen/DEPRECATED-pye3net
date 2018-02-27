@@ -61,4 +61,3 @@ def util_create_interface(host_name,lanzone_name,dev_address):
     spec['dev_address']=dev_address
     spec['lanzone_id']=lanzone_id
     invt_register_vswitch_interface(spec)
-    
