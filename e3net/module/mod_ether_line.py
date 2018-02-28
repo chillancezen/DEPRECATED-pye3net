@@ -23,6 +23,8 @@ from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_LINK_EXCLUSIVE
 from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_SHARED
 from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
 from e3net.common.e3log import get_e3loger
+from e3net.inventory.invt_vswitch_topology_edge import invt_register_vswitch_topology_edge
+
 e3loger=get_e3loger('e3vswitch_controller')
 #
 #make sure
@@ -59,7 +61,7 @@ def _prefetch_create_config(config,iResult):
          if il in bl:
             raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT)
 
-def _do_creating_topology(config,iResult):
+def _create_ether_line_topology(config,iResult):
     #if it's a solo customer lan zone,it's a NULL graphic
     if len(iResult['initial_lanzones'])==1:
         return
@@ -236,7 +238,66 @@ def _do_creating_topology(config,iResult):
     e3loger.debug('permanent host set:')
     for host_id in permanent_host_set:
         e3loger.debug('\thost_id:%s'%(host_id))
+    iResult['permanent_lanzone_set']=permanent_lanzone_set
+    iResult['temporary_lanzone_set']=temporary_lanzone_set
+    iResult['permanent_host_set']=permanent_host_set
+    iResult['lanzones']=lanzones
+    iResult['hosts']=hosts
+    iResult['interfaces']=interfaces
+
+def _validate_ether_line_topology(config,iResult):
+    permanent_lanzone_set=iResult['permanent_lanzone_set']
+    temporary_lanzone_set=iResult['temporary_lanzone_set']
+    permanent_host_set=iResult['permanent_host_set']
+    lanzones=iResult['lanzones']
+    hosts=iResult['hosts']
+    interfaces=iResult['interfaces']
+    start_lanzone_id=config['initial_lanzones'][0]
+    end_lanzone_id=config['initial_lanzones'][1]
+    e_line=iResult['ether_service']
+    iface_type=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
+    if e_line.link_type!=E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
+        iface_type=E3VSWITCH_INTERFACE_TYPE_SHARED
+    target_lanzone_id=end_lanzone_id
+    while True:
+        weight,path=permanent_lanzone_set[target_lanzone_id]
+        iface0_id,host_id,iface1_id=path
+        if not host_id:
+            assert(target_lanzone_id==start_lanzone_id)
+            break
+        iface0=interfaces[iface0_id]
+        host=hosts[host_id]
+        iface1=interfaces[iface1_id]
+        assert(iface0.lanzone_id==target_lanzone_id)
+        assert(iface0.host_id==host_id)
+        assert(iface0.interface_type==iface_type)
+        assert(iface1.host_id==host_id)
+        assert(iface1.interface_type==iface_type)
+        target_lanzone_id=iface1.lanzone_id
+
+def _create_topology_edge(config,iResult):
+    permanent_lanzone_set=iResult['permanent_lanzone_set']
+    lanzones=iResult['lanzones']
+    hosts=iResult['hosts']
+    interfaces=iResult['interfaces']
+    start_lanzone_id=config['initial_lanzones'][0]
+    end_lanzone_id=config['initial_lanzones'][1]
+    e_line=iResult['ether_service']
+    target_lanzone_id=end_lanzone_id
+    while True:
+        weight,path=permanent_lanzone_set[target_lanzone_id]
+        iface0_id,host_id,iface1_id=path
+        if not host_id:
+            break
+        spec=dict()
+        spec['interface0']=iface0_id
+        spec['interface1']=iface1_id
+        spec['service_id']=e_line.id
+        invt_register_vswitch_topology_edge(spec)
+        target_lanzone_id=interfaces[iface1_id].lanzone_id
 
 def create_ether_line_topology(config,iResult):
     _prefetch_create_config(config,iResult)
-    _do_creating_topology(config,iResult)
+    _create_ether_line_topology(config,iResult)
+    _validate_ether_line_topology(config,iResult)
+    _create_topology_edge(config,iResult)
