@@ -102,19 +102,20 @@ def _create_ether_lan_topology(config,iResult):
     permanent_host_set=set()
     temporary_lanzone_set=set()
     unused_lanzone_set=set()
-    start_lanzone_id=iResult['initial_lanzones'][0]
+    start_lanzone_id=config['initial_lanzones'][0]
     for lanzone_id in lanzones:
         lanzone=lanzones[lanzone_id]
         if lanzone.zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and \
             lanzone_id not in iResult['initial_lanzones']:
             unused_lanzone_set.add(lanzone_id)
         elif lanzone_id==start_lanzone_id:
-            permanent_lanzone_set.add(lanzone_id)
+            permanent_lanzone_set[lanzone_id]=(0,(None,None,None))
         else:
             temporary_lanzone_set.add(lanzone_id)
     #
     #enter main loop of Prim'a algorithm
     #for each iteration, find the edge with least weight among all temporary neighbors
+    g_degree=dict()
     while True:
         _next_least_edge_weight=infinite_weight
         _next_lanzone_id=None
@@ -148,7 +149,7 @@ def _create_ether_lan_topology(config,iResult):
                     iface=interfaces[_iface_id]
                     if iface.lanzone_id not in temporary_lanzone_set:
                         continue
-                    if e_line.link_type==E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
+                    if e_lan.link_type==E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
                         if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
                             iface_weight[_iface_id]!=0:
                             continue
@@ -165,6 +166,13 @@ def _create_ether_lan_topology(config,iResult):
             for _immediate_lanzone_id in intermediate_lanzone:
                 iface0_id,host_id,iface1_id=intermediate_lanzone[_immediate_lanzone_id]
                 _edge_weight=iface_weight[iface0_id]+iface_weight[iface1_id]
+                #prevent customer lanzone from being a immediate backbone lanzone
+                #i.e. if the customer lanzone is already in the permanent lanzone set, 
+                #skip it.
+                if _immediate_lanzone_id in g_degree and \
+                    lanzones[_immediate_lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and \
+                    g_degree[_immediate_lanzone_id]==1:
+                    continue
                 if not _next_lanzone_id or \
                     _edge_weight<_next_least_edge_weight:
                     _next_lanzone_id=_immediate_lanzone_id
@@ -174,10 +182,48 @@ def _create_ether_lan_topology(config,iResult):
                     _next_least_edge_weight=_edge_weight
         if not _next_lanzone_id:
             break
+        #update g_degree for every edge
+        if _next_lanzone_id not in g_degree:
+            g_degree[_next_lanzone_id]=1
+        else:
+            g_degree[_next_lanzone_id]=g_degree[_next_lanzone_id]+1
+        iface1=interfaces[_next_iface1_id]
+        if iface1.lanzone_id not in g_degree:
+            g_degree[iface1.lanzone_id]=1
+        else:
+            g_degree[iface1.lanzone_id]=g_degree[iface1.lanzone_id]+1
         permanent_lanzone_set[_next_lanzone_id]=(_next_least_edge_weight,(_next_iface0_id,_next_host_id,_next_iface1_id))
         permanent_host_set.add(_next_host_id)
         temporary_lanzone_set.remove(_next_lanzone_id)
-
+    #
+    #remove those backbones to which no customer lanzones are attached,
+    #we call these lanzones orphaned
+    while True:
+        should_terminate=True
+        degree=dict()
+        for lanzone_id in permanent_lanzone_set:
+            weight,path=permanent_lanzone_set[lanzone_id]
+            iface0_id,host_id,iface1_id=path
+            if not host_id:
+                continue
+            iface1=interfaces[iface1_id]
+            if lanzone_id not in degree:
+                degree[lanzone_id]=1
+            else:
+                degree[lanzone_id]=degree[lanzone_id]+1
+            if iface1.lanzone_id not in degree:
+                degree[iface1.lanzone_id]=1
+            else:
+                degree[iface1.lanzone_id]=degree[iface1.lanzone_id]+1
+        for lanzone_id in degree:
+            lanzone=lanzones[lanzone_id]
+            if degree[lanzone_id]==1 and lanzone.zone_type==E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
+                del permanent_lanzone_set[lanzone_id]
+                should_terminate=False
+        if should_terminate:
+            break
+    for lanzone_id in permanent_lanzone_set:
+        print(lanzone_id,'(%s):'%(lanzones[lanzone_id].name),permanent_lanzone_set[lanzone_id])
 def create_ether_lan_topology(config,iResult):
     _prefetch_create_config(config,iResult)
     _create_ether_lan_topology(config,iResult)
