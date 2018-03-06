@@ -47,6 +47,15 @@ def _create_ether_lan_topology(config, iResult):
     interfaces = invt_list_vswitch_interfaces()
     edges = invt_list_vswitch_topology_edges()
     iface_weight = dict()
+    e3loger.debug('original lanzones set:')
+    for lanzone_id in lanzones:
+        e3loger.debug('\t%s' % (lanzones[lanzone_id]))
+    e3loger.debug('original host set:')
+    for host_id in hosts:
+        e3loger.debug('\t%s' % (hosts[host_id]))
+    e3loger.debug('original interface set:')
+    for iface_id in interfaces:
+        e3loger.debug('\t%s' % (interfaces[iface_id]))
     #
     #initialize the edge's weight
     #and calculate the weight of these interfaces which are already in the topology
@@ -58,6 +67,9 @@ def _create_ether_lan_topology(config, iResult):
         iface1 = edge.interface1
         iface_weight[iface0] = iface_weight[iface0] + 1
         iface_weight[iface1] = iface_weight[iface1] + 1
+    e3loger.debug('interface weight:')
+    for iface_id in iface_weight:
+        e3loger.debug('\t%s:%s' % (iface_id, iface_weight[iface_id]))
     #
     #remove the banned lanzones
     #
@@ -97,11 +109,20 @@ def _create_ether_lan_topology(config, iResult):
             host_2_iface[host_id] = set()
         assert (host_id in host_2_iface)
         host_2_iface[host_id].add(_iface_id)
+    e3loger.debug('lanzone to interface mapping:')
+    for lanzone_id in lanzone_2_iface:
+        e3loger.debug('    lanzone id:%s' % (lanzone_id))
+        for iface_id in lanzone_2_iface[lanzone_id]:
+            e3loger.debug('        %s' % (iface_id))
+    e3loger.debug('host to interface mapping:')
+    for host_id in host_2_iface:
+        e3loger.debug('   host id:%s' % (host_id))
+        for iface_id in host_2_iface[host_id]:
+            e3loger.debug('        %s' % (iface_id))
     #
     #setup intermediate variables
     #
     permanent_lanzone_set = dict()
-    permanent_host_set = set()
     temporary_lanzone_set = set()
     unused_lanzone_set = set()
     start_lanzone_id = config['initial_lanzones'][0]
@@ -114,6 +135,10 @@ def _create_ether_lan_topology(config, iResult):
             permanent_lanzone_set[lanzone_id] = (0, (None, None, None))
         else:
             temporary_lanzone_set.add(lanzone_id)
+    e3loger.debug('start lanzone id:%s' % (start_lanzone_id))
+    e3loger.debug('permanent lanzone set:%s' % (permanent_lanzone_set))
+    e3loger.debug('temporary lanzone set:%s' % (temporary_lanzone_set))
+    e3loger.debug('unused_lanzone_set:%s' % (unused_lanzone_set))
     #
     #enter main loop of Prim'a algorithm
     #for each iteration, find the edge with least weight among all temporary neighbors
@@ -129,8 +154,6 @@ def _create_ether_lan_topology(config, iResult):
             intermediate_host = dict()
             for _iface_id in lanzone_2_iface[p_lanzone_id]:
                 iface = interfaces[_iface_id]
-                if iface.host_id in permanent_host_set:
-                    continue
                 if e_lan.link_type == E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
                     if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
                         iface_weight[_iface_id]!=0:
@@ -146,7 +169,6 @@ def _create_ether_lan_topology(config, iResult):
             #find the top half of the topology edge
             intermediate_lanzone = dict()
             for _host_id in intermediate_host:
-                assert (_host_id not in permanent_host_set)
                 host = hosts[_host_id]
                 for _iface_id in host_2_iface[_host_id]:
                     iface = interfaces[_iface_id]
@@ -202,7 +224,6 @@ def _create_ether_lan_topology(config, iResult):
                                                    (_next_iface0_id,
                                                     _next_host_id,
                                                     _next_iface1_id))
-        permanent_host_set.add(_next_host_id)
         temporary_lanzone_set.remove(_next_lanzone_id)
     #
     #remove those backbones to which no customer lanzones are attached,
@@ -232,8 +253,9 @@ def _create_ether_lan_topology(config, iResult):
         if should_terminate:
             break
     for lanzone_id in permanent_lanzone_set:
-        print(lanzone_id, '(%s):' % (lanzones[lanzone_id].name),
-              permanent_lanzone_set[lanzone_id])
+        e3loger.debug('lanzone id:%s %s  %s' %
+                      (lanzone_id, lanzones[lanzone_id].name,
+                       permanent_lanzone_set[lanzone_id]))
 
 
 def create_ether_lan_topology(config, iResult):
