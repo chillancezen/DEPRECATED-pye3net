@@ -14,30 +14,42 @@ root_key is 'ether_service_vlan'
 while sub_key is the uuid of the ether_service_vlan
 '''
 
-default_user_timeout=60
-root_key='ether_service_vlan'
+default_user_timeout = 60
+root_key = 'ether_service_vlan'
 
-def invt_register_vswitch_ether_service_vlan(fields_create_dict,user_sync=False,user_timeout=default_user_timeout):
-    assert('service_id' in fields_create_dict)
-    assert('lanzone_id' in fields_create_dict)
-    assert('vlan_id' in fields_create_dict)
-    base=get_inventory_base()
-    assert(base)
-    return base.register_object(root_key,fields_create_dict,user_sync=user_sync,user_timeout=user_timeout)
 
-def invt_unregister_vswitch_ether_service_vlan(vlan_uuid,user_sync=False,user_timeout=default_user_timeout):
-    sub_key=vlan_uuid
-    base=get_inventory_base()
-    assert(base)
-    base.unregister_object(root_key,sub_key,user_sync=user_sync,user_timeout=user_timeout)
+def invt_register_vswitch_ether_service_vlan(
+        fields_create_dict, user_sync=False,
+        user_timeout=default_user_timeout):
+    assert ('service_id' in fields_create_dict)
+    assert ('lanzone_id' in fields_create_dict)
+    assert ('vlan_id' in fields_create_dict)
+    base = get_inventory_base()
+    assert (base)
+    return base.register_object(
+        root_key,
+        fields_create_dict,
+        user_sync=user_sync,
+        user_timeout=user_timeout)
+
+
+def invt_unregister_vswitch_ether_service_vlan(
+        vlan_uuid, user_sync=False, user_timeout=default_user_timeout):
+    sub_key = vlan_uuid
+    base = get_inventory_base()
+    assert (base)
+    base.unregister_object(
+        root_key, sub_key, user_sync=user_sync, user_timeout=user_timeout)
+
 
 def invt_get_vswitch_ether_service_vlan(vlan_uuid):
-    sub_key=vlan_uuid
-    base=get_inventory_base()
-    assert(base)
-    return base.get_object(root_key,sub_key)
+    sub_key = vlan_uuid
+    base = get_inventory_base()
+    assert (base)
+    return base.get_object(root_key, sub_key)
+
 
 def invt_list_vswitch_ether_service_vlans():
-    base=get_inventory_base()
-    assert(base)
+    base = get_inventory_base()
+    assert (base)
     return base.list_objects(root_key)

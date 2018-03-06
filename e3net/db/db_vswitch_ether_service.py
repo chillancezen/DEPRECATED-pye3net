@@ -27,72 +27,82 @@ import traceback
 from e3net.common.e3keeper import root_keeper
 from e3net.db.db_base import register_database_load_entrance
 
-e3loger=get_e3loger('e3vswitch_controller')
+e3loger = get_e3loger('e3vswitch_controller')
 
-DB_NAME='E3NET_VSWITCH'
+DB_NAME = 'E3NET_VSWITCH'
 
-E3NET_ETHER_SERVICE_TYPE_LINE='e-line'
-E3NET_ETHER_SERVICE_TYPE_LAN='e-lan'
+E3NET_ETHER_SERVICE_TYPE_LINE = 'e-line'
+E3NET_ETHER_SERVICE_TYPE_LAN = 'e-lan'
 
-E3NET_ETHER_SERVICE_LINK_SHARED='shared'
-E3NET_ETHER_SERVICE_LINK_EXCLUSIVE='exclusive'
+E3NET_ETHER_SERVICE_LINK_SHARED = 'shared'
+E3NET_ETHER_SERVICE_LINK_EXCLUSIVE = 'exclusive'
+
 
 class E3EtherService(DB_BASE):
-    __tablename__='ether_service'
-    
-    id=Column(String(64),primary_key=True)
-    name=Column(String(64),nullable=False)
-    service_type=Column(Enum(E3NET_ETHER_SERVICE_TYPE_LINE,E3NET_ETHER_SERVICE_TYPE_LAN),nullable=False)
-    tenant_id=Column(String(64),ForeignKey('tenant.id'),nullable=False)
-    created_at=Column(DateTime(),nullable=False,default=datetime.now)
-    link_type=Column(Enum(E3NET_ETHER_SERVICE_LINK_SHARED,E3NET_ETHER_SERVICE_LINK_EXCLUSIVE),nullable=False,default=E3NET_ETHER_SERVICE_LINK_SHARED)
+    __tablename__ = 'ether_service'
+
+    id = Column(String(64), primary_key=True)
+    name = Column(String(64), nullable=False)
+    service_type = Column(
+        Enum(E3NET_ETHER_SERVICE_TYPE_LINE, E3NET_ETHER_SERVICE_TYPE_LAN),
+        nullable=False)
+    tenant_id = Column(String(64), ForeignKey('tenant.id'), nullable=False)
+    created_at = Column(DateTime(), nullable=False, default=datetime.now)
+    link_type = Column(
+        Enum(E3NET_ETHER_SERVICE_LINK_SHARED,
+             E3NET_ETHER_SERVICE_LINK_EXCLUSIVE),
+        nullable=False,
+        default=E3NET_ETHER_SERVICE_LINK_SHARED)
 
     def __str__(self):
-        ret=dict()
-        ret['id']=self.id
-        ret['name']=self.name
-        ret['service_type']=self.service_type
-        ret['tenant_id']=self.tenant_id
-        ret['created_at']=self.created_at.ctime()
-        ret['link_type']=self.link_type
+        ret = dict()
+        ret['id'] = self.id
+        ret['name'] = self.name
+        ret['service_type'] = self.service_type
+        ret['tenant_id'] = self.tenant_id
+        ret['created_at'] = self.created_at.ctime()
+        ret['link_type'] = self.link_type
         return str(ret)
 
     def to_key(self):
         return str(self.id)
 
     def clone(self):
-        c=E3EtherService()
-        c.id=self.id
-        c.name=self.name
-        c.service_type=self.service_type
-        c.tenant_id=self.tenant_id
-        c.created_at=self.created_at
-        c.link_type=self.link_type
+        c = E3EtherService()
+        c.id = self.id
+        c.name = self.name
+        c.service_type = self.service_type
+        c.tenant_id = self.tenant_id
+        c.created_at = self.created_at
+        c.link_type = self.link_type
         return c
 
+
 def laod_ether_services_from_db():
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        services=session.query(E3EtherService).all()
+        services = session.query(E3EtherService).all()
         for svc in services:
-            root_keeper.set('ether_service',svc.id,svc.clone())
+            root_keeper.set('ether_service', svc.id, svc.clone())
     finally:
         session.close()
 
-register_database_load_entrance('ether_service',laod_ether_services_from_db)
+
+register_database_load_entrance('ether_service', laod_ether_services_from_db)
+
 
 def db_register_vswitch_ether_service(fields_create_dict):
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        service=E3EtherService()
-        service.id=str(uuid4())
+        service = E3EtherService()
+        service.id = str(uuid4())
         for field in fields_create_dict:
-            setattr(service,field,fields_create_dict[field])
+            setattr(service, field, fields_create_dict[field])
         session.add(service)
         session.commit()
-        e3loger.info('registering E3EtherService:%s succeeds'%(service))
+        e3loger.info('registering E3EtherService:%s succeeds' % (service))
         return service.clone()
     except Exception as e:
         session.rollback()
@@ -100,31 +110,36 @@ def db_register_vswitch_ether_service(fields_create_dict):
     finally:
         session.close()
 
+
 def db_get_vswitch_ether_service(uuid):
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        service=session.query(E3EtherService).filter(E3EtherService.id==uuid).first()
+        service = session.query(E3EtherService).filter(
+            E3EtherService.id == uuid).first()
         if not service:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
         return service.clone()
     finally:
         session.close()
 
+
 def db_list_vswitch_ether_services():
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        services=session.query(E3EtherService).all()
+        services = session.query(E3EtherService).all()
         return [svc.clone() for svc in services]
     finally:
         session.close()
 
+
 def db_unregiser_vswitch_service(uuid):
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        service=session.query(E3EtherService).filter(E3EtherService.id==uuid).first()
+        service = session.query(E3EtherService).filter(
+            E3EtherService.id == uuid).first()
         if not service:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
         session.delete(service)
@@ -134,4 +149,3 @@ def db_unregiser_vswitch_service(uuid):
         raise e
     finally:
         session.close()
-

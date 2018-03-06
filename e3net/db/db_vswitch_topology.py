@@ -27,67 +27,80 @@ from e3net.common.e3log import get_e3loger
 from e3net.common.e3keeper import root_keeper
 from e3net.db.db_base import register_database_load_entrance
 
-DB_NAME='E3NET_VSWITCH'
-e3loger=get_e3loger('e3vswitch_controller')
+DB_NAME = 'E3NET_VSWITCH'
+e3loger = get_e3loger('e3vswitch_controller')
+
 
 #note this is undirected edge
 class E3TopologyEdge(DB_BASE):
-    __tablename__='topology_edge'
+    __tablename__ = 'topology_edge'
 
-    id=Column(String(64),primary_key=True)
-    interface0=Column(String(64),ForeignKey('vswitch_interface.id'),nullable=False)
-    interface1=Column(String(64),ForeignKey('vswitch_interface.id'),nullable=False)
-    service_id=Column(String(64),ForeignKey('ether_service.id'),nullable=False)
-    
+    id = Column(String(64), primary_key=True)
+    interface0 = Column(
+        String(64), ForeignKey('vswitch_interface.id'), nullable=False)
+    interface1 = Column(
+        String(64), ForeignKey('vswitch_interface.id'), nullable=False)
+    service_id = Column(
+        String(64), ForeignKey('ether_service.id'), nullable=False)
 
     def __str__(self):
-        ret=dict()
-        ret['id']=self.id
-        ret['interface0']=self.interface0
-        ret['interface1']=self.interface1
-        ret['service_id']=self.service_id
+        ret = dict()
+        ret['id'] = self.id
+        ret['interface0'] = self.interface0
+        ret['interface1'] = self.interface1
+        ret['service_id'] = self.service_id
         return str(ret)
 
     def to_key(self):
         return str(self.id)
 
     def clone(self):
-        edge=E3TopologyEdge()
-        edge.id=self.id
-        edge.interface0=self.interface0
-        edge.interface1=self.interface1
-        edge.service_id=self.service_id
+        edge = E3TopologyEdge()
+        edge.id = self.id
+        edge.interface0 = self.interface0
+        edge.interface1 = self.interface1
+        edge.service_id = self.service_id
         return edge
 
+
 def load_vswitch_topology_edges_from_db():
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        edges=session.query(E3TopologyEdge).all()
+        edges = session.query(E3TopologyEdge).all()
         for edge in edges:
-            root_keeper.set('topology_edge',edge.id,edge.clone())
+            root_keeper.set('topology_edge', edge.id, edge.clone())
     finally:
         session.close()
-register_database_load_entrance('topology_edge',load_vswitch_topology_edges_from_db)
+
+
+register_database_load_entrance('topology_edge',
+                                load_vswitch_topology_edges_from_db)
+
 
 def db_register_vswitch_topology_edge(fields_create_dict):
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        edge=session.query(E3TopologyEdge).filter(or_(
-            and_(E3TopologyEdge.interface0==fields_create_dict['interface0'],
-                E3TopologyEdge.interface1==fields_create_dict['interface1'],
-                E3TopologyEdge.service_id==fields_create_dict['service_id']),
-            and_(E3TopologyEdge.interface0==fields_create_dict['interface1'],
-                E3TopologyEdge.interface1==fields_create_dict['interface0'],
-                E3TopologyEdge.service_id==fields_create_dict['service_id']))).first()
+        edge = session.query(E3TopologyEdge).filter(
+            or_(
+                and_(E3TopologyEdge.interface0 == fields_create_dict[
+                    'interface0'], E3TopologyEdge.interface1 ==
+                     fields_create_dict['interface1'],
+                     E3TopologyEdge.service_id == fields_create_dict[
+                         'service_id']),
+                and_(E3TopologyEdge.interface0 == fields_create_dict[
+                    'interface1'], E3TopologyEdge.interface1 ==
+                     fields_create_dict['interface0'],
+                     E3TopologyEdge.service_id == fields_create_dict[
+                         'service_id']))).first()
         if edge:
             raise e3_exception(E3_EXCEPTION_BE_PRESENT)
-        edge=E3TopologyEdge()
-        edge.id=str(uuid4())
-        edge.interface0=fields_create_dict['interface0']
-        edge.interface1=fields_create_dict['interface1']
-        edge.service_id=fields_create_dict['service_id']
+        edge = E3TopologyEdge()
+        edge.id = str(uuid4())
+        edge.interface0 = fields_create_dict['interface0']
+        edge.interface1 = fields_create_dict['interface1']
+        edge.service_id = fields_create_dict['service_id']
         session.add(edge)
         session.commit()
         return edge.clone()
@@ -97,31 +110,36 @@ def db_register_vswitch_topology_edge(fields_create_dict):
     finally:
         session.close()
 
+
 def db_get_vswitch_topology_edge(uuid):
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        edge=session.query(E3TopologyEdge).filter(E3TopologyEdge.id==uuid).first()
+        edge = session.query(E3TopologyEdge).filter(
+            E3TopologyEdge.id == uuid).first()
         if not edge:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
         return edge.clone()
     finally:
         session.close()
 
+
 def db_list_vswitch_topology_edges():
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        edges=session.query(E3TopologyEdge).all()
+        edges = session.query(E3TopologyEdge).all()
         return [edge.clone() for edge in edges]
     finally:
         session.close()
 
+
 def db_unregister_vswitch_topology_edge(uuid):
-    session=db_sessions[DB_NAME]()
+    session = db_sessions[DB_NAME]()
     try:
         session.begin()
-        edge=session.query(E3TopologyEdge).filter(E3TopologyEdge.id==uuid).first()
+        edge = session.query(E3TopologyEdge).filter(
+            E3TopologyEdge.id == uuid).first()
         if not edge:
             raise e3_exception(E3_EXCEPTION_NOT_FOUND)
         session.delete(edge)
