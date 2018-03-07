@@ -142,6 +142,7 @@ def _create_ether_lan_topology(config, iResult):
     #
     #enter main loop of Prim'a algorithm
     #for each iteration, find the edge with least weight among all temporary neighbors
+    debug_counter = 0
     g_degree = dict()
     while True:
         _next_least_edge_weight = infinite_weight
@@ -149,7 +150,10 @@ def _create_ether_lan_topology(config, iResult):
         _next_iface0_id = None
         _next_iface1_id = None
         _next_host_id = None
+        e3loger.debug('enter round %s' % (debug_counter))
+        debug_counter = debug_counter + 1
         for p_lanzone_id in permanent_lanzone_set:
+            e3loger.debug('choose permanent lanzone:%s' % (p_lanzone_id))
             #find the bottom half of the topology edge
             intermediate_host = dict()
             for _iface_id in lanzone_2_iface[p_lanzone_id]:
@@ -166,6 +170,7 @@ def _create_ether_lan_topology(config, iResult):
                 elif iface_weight[_iface_id] < iface_weight[intermediate_host[iface.
                                                                               host_id]]:
                     intermediate_host[iface.host_id] = _iface_id
+            e3loger.debug('intermediate_host:%s' % (intermediate_host))
             #find the top half of the topology edge
             intermediate_lanzone = dict()
             for _host_id in intermediate_host:
@@ -189,6 +194,7 @@ def _create_ether_lan_topology(config, iResult):
                         iface_weight[intermediate_lanzone[iface.lanzone_id][2]]:
                         intermediate_lanzone[iface.lanzone_id] = (
                             _iface_id, _host_id, intermediate_host[_host_id])
+            e3loger.debug('intermediate_lanzone:%s' % (intermediate_lanzone))
             #find the least weighted topology edge for p_lanzone_id
             for _immediate_lanzone_id in intermediate_lanzone:
                 iface0_id, host_id, iface1_id = intermediate_lanzone[
@@ -197,9 +203,15 @@ def _create_ether_lan_topology(config, iResult):
                 #prevent customer lanzone from being a immediate backbone lanzone
                 #i.e. if the customer lanzone is already in the permanent lanzone set,
                 #skip it.
-                if _immediate_lanzone_id in g_degree and \
-                    lanzones[_immediate_lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and \
-                    g_degree[_immediate_lanzone_id]==1:
+                _iface1 = interfaces[iface1_id]
+                if _iface1.lanzone_id in g_degree and \
+                    lanzones[_iface1.lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and \
+                    g_degree[_iface1.lanzone_id]==1:
+                    continue
+                #two customer lanzones can not constitute a topology edge
+                _iface0 = interfaces[iface0_id]
+                if lanzones[_iface1.lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and \
+                    lanzones[_iface0.lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER:
                     continue
                 if not _next_lanzone_id or \
                     _edge_weight<_next_least_edge_weight:
@@ -225,6 +237,9 @@ def _create_ether_lan_topology(config, iResult):
                                                     _next_host_id,
                                                     _next_iface1_id))
         temporary_lanzone_set.remove(_next_lanzone_id)
+        e3loger.debug('add topology %s:%s' %
+                      (_next_lanzone_id,
+                       permanent_lanzone_set[_next_lanzone_id]))
     #
     #remove those backbones to which no customer lanzones are attached,
     #we call these lanzones orphaned
@@ -256,8 +271,60 @@ def _create_ether_lan_topology(config, iResult):
         e3loger.debug('lanzone id:%s %s  %s' %
                       (lanzone_id, lanzones[lanzone_id].name,
                        permanent_lanzone_set[lanzone_id]))
+    iResult['permanent_lanzone_set'] = permanent_lanzone_set
+    iResult['temporary_lanzone_set'] = temporary_lanzone_set
+    iResult['start_lanzone_id'] = start_lanzone_id
+    iResult['lanzones'] = lanzones
+    iResult['hosts'] = hosts
+    iResult['interfaces'] = interfaces
+
+
+def _validate_ether_lan_topology(config, iResult):
+    lanzones = iResult['lanzones']
+    hosts = iResult['hosts']
+    interfaces = iResult['interfaces']
+    start_lanzone_id = iResult['start_lanzone_id']
+    temporary_lanzone_set = iResult['temporary_lanzone_set']
+    permanent_lanzone_set = iResult['permanent_lanzone_set']
+    initial_lanzone_set = iResult['initial_lanzones']
+    e_lan = iResult['ether_service']
+    iface_type = E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
+    if e_lan.link_type != E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
+        iface_type = E3VSWITCH_INTERFACE_TYPE_SHARED
+    degree = dict()
+    for lanzone_id in permanent_lanzone_set:
+        weight, path = permanent_lanzone_set[lanzone_id]
+        iface0_id, host_id, iface1_id = path
+        if not host_id:
+            continue
+        iface0 = interfaces[iface0_id]
+        iface1 = interfaces[iface1_id]
+        host = hosts[host_id]
+        assert (iface0.interface_type == iface_type)
+        assert (iface1.interface_type == iface_type)
+        assert (iface0.host_id == host_id)
+        assert (iface1.host_id == host_id)
+        assert (iface0.lanzone_id == lanzone_id)
+        if iface0.lanzone_id not in degree:
+            degree[iface0.lanzone_id] = 1
+        else:
+            degree[iface0.lanzone_id] = degree[iface0.lanzone_id] + 1
+        if iface1.lanzone_id not in degree:
+            degree[iface1.lanzone_id] = 1
+        else:
+            degree[iface1.lanzone_id] = degree[iface1.lanzone_id] + 1
+    for lanzone_id in degree:
+        lanzone = lanzones[lanzone_id]
+        print(lanzone.name, lanzone.zone_type, degree[lanzone_id])
+        if lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER:
+            assert (degree[lanzone_id] == 1)
+        else:
+            assert (degree[lanzone_id] > 1)
+    for lanzone_id in initial_lanzone_set:
+        assert (lanzone_id in permanent_lanzone_set)
 
 
 def create_ether_lan_topology(config, iResult):
     _prefetch_create_config(config, iResult)
     _create_ether_lan_topology(config, iResult)
+    _validate_ether_lan_topology(config, iResult)
