@@ -315,16 +315,74 @@ def _validate_ether_lan_topology(config, iResult):
             degree[iface1.lanzone_id] = degree[iface1.lanzone_id] + 1
     for lanzone_id in degree:
         lanzone = lanzones[lanzone_id]
-        print(lanzone.name, lanzone.zone_type, degree[lanzone_id])
         if lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER:
             assert (degree[lanzone_id] == 1)
         else:
             assert (degree[lanzone_id] > 1)
     for lanzone_id in initial_lanzone_set:
         assert (lanzone_id in permanent_lanzone_set)
+    #check whether a circle present
+    #by search the path in Depth First manner
+    vertext = dict()
+    for _lanzone_id in permanent_lanzone_set:
+        _, _path = permanent_lanzone_set[_lanzone_id]
+        _iface0_id, _host_id, _iface1_id = _path
+        if not _host_id:
+            continue
+        _lanzone0_id = interfaces[_iface0_id].lanzone_id
+        _lanzone1_id = interfaces[_iface1_id].lanzone_id
+        if _lanzone0_id not in vertext:
+            vertext[_lanzone0_id] = set()
+        vertext[_lanzone0_id].add(_lanzone1_id)
+        if _lanzone1_id not in vertext:
+            vertext[_lanzone1_id] = set()
+        vertext[_lanzone1_id].add(_lanzone0_id)
+    e3loger.debug('adjacency matrix:%s' % (vertext))
+    assert (start_lanzone_id in vertext)
+    used = set()
+    path_stack = list()
+    path_stack.append(start_lanzone_id)
+    used.add(start_lanzone_id)
+    e3loger.debug('circle tedection: push lanzone:%s' % (start_lanzone_id))
+    next_lanzone_id = None
+    while len(path_stack):
+        current_lanzone_id = path_stack[-1]
+        neighbors = vertext[current_lanzone_id]
+        next_lanzone_id = None
+        for _lanzone_id in neighbors:
+            if _lanzone_id not in used:
+                next_lanzone_id = _lanzone_id
+                break
+        if next_lanzone_id:
+            assert (next_lanzone_id not in path_stack)
+            path_stack.append(next_lanzone_id)
+            used.add(next_lanzone_id)
+            e3loger.debug('circle tedection: push lanzone:%s' %
+                          (next_lanzone_id))
+        else:
+            poped_lanzone_id = path_stack.pop()
+            e3loger.debug('circle tedection: pop lanzone:%s' %
+                          (poped_lanzone_id))
+
+
+def _create_ether_lan_topology_edge(config, iResult):
+    interfaces = iResult['interfaces']
+    permanent_lanzone_set = iResult['permanent_lanzone_set']
+    e_lan = iResult['ether_service']
+    for _lanzone_id in permanent_lanzone_set:
+        _, _path = permanent_lanzone_set[_lanzone_id]
+        _iface0_id, _host_id, _iface1_id = _path
+        if not _host_id:
+            continue
+        spec = dict()
+        spec['interface0'] = _iface0_id
+        spec['interface1'] = _iface1_id
+        spec['service_id'] = e_lan.id
+        invt_register_vswitch_topology_edge(spec)
 
 
 def create_ether_lan_topology(config, iResult):
     _prefetch_create_config(config, iResult)
     _create_ether_lan_topology(config, iResult)
     _validate_ether_lan_topology(config, iResult)
+    _create_ether_lan_topology_edge(config, iResult)

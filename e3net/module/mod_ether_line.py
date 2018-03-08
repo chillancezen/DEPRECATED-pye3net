@@ -291,7 +291,7 @@ def _validate_ether_line_topology(config, iResult):
         target_lanzone_id = iface1.lanzone_id
 
 
-def _create_topology_edge(config, iResult):
+def _create_ether_line_topology_edge(config, iResult):
     permanent_lanzone_set = iResult['permanent_lanzone_set']
     lanzones = iResult['lanzones']
     hosts = iResult['hosts']
@@ -317,4 +317,4 @@ def create_ether_line_topology(config, iResult):
     _prefetch_create_config(config, iResult)
     _create_ether_line_topology(config, iResult)
     _validate_ether_line_topology(config, iResult)
-    _create_topology_edge(config, iResult)
+    _create_ether_line_topology_edge(config, iResult)
