@@ -363,7 +363,8 @@ def _validate_ether_lan_topology(config, iResult):
             poped_lanzone_id = path_stack.pop()
             e3loger.debug('circle tedection: pop lanzone:%s' %
                           (poped_lanzone_id))
-
+    for _lanzone_id in initial_lanzone_set:
+        assert (_lanzone_id in used)
 
 def _create_ether_lan_topology_edge(config, iResult):
     interfaces = iResult['interfaces']
