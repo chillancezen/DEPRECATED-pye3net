@@ -9,7 +9,8 @@ from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
 from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
 from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
 from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
-from e3net.module.mod_common import EtherServiceCreateConfig
+from e3net.ether_service.ether_service_common import EtherServiceCreateConfig
+from e3net.ether_service.ether_service_common import EtherLANServiceUpdateConfig
 from e3net.inventory.invt_vswitch_lan_zone import invt_get_vswitch_lan_zone
 from e3net.inventory.invt_vswitch_host import invt_get_vswitch_host
 from e3net.inventory.invt_vswitch_interface import invt_get_vswitch_interface
@@ -24,11 +25,13 @@ from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_SHARED
 from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
 from e3net.db.db_vswitch_lan_zone import E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER
 from e3net.db.db_vswitch_lan_zone import E3VSWITCH_LAN_ZONE_TYPE_BACKBONE
+from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_TYPE_LINE
+from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_TYPE_LAN
+from e3net.inventory.invt_vswitch_topology_edge import invt_list_vswitch_topology_edges
 from e3net.common.e3log import get_e3loger
 from e3net.inventory.invt_vswitch_topology_edge import invt_register_vswitch_topology_edge
 #share the same config prefetch function
-from e3net.module.mod_ether_line import _prefetch_create_config
-
+from e3net.ether_service.ether_line_service import _prefetch_create_config
 e3loger = get_e3loger('e3vswitch_controller')
 
 
@@ -381,7 +384,38 @@ def _create_ether_lan_topology_edge(config, iResult):
         spec['service_id'] = e_lan.id
         invt_register_vswitch_topology_edge(spec)
 
+def _prefetch_ether_lan_update_config(config,iResult):
+    iResult['ether_service']=invt_get_vswitch_ether_service(config['ether_lan_service_id'])
+    assert(iResult['ether_service'].service_type==E3NET_ETHER_SERVICE_TYPE_LAN)
+    iResult['operation']=config['operation']
+    iResult['ban_hosts']=set()
+    for _host in config['ban_hosts']:
+        iResult['ban_hosts'].add(_host)
+    e3loger.debug('banned hosts:%s'%(iResult['ban_hosts']))
+    iResult['ban_lanzones']=set()
+    for _lanzone in config['ban_lanzones']:
+        iResult['ban_lanzones'].add(_lanzone)
+    e3loger.debug('banned lanzones:%s'%(iResult['ban_lanzones']))
+    iResult['ban_interfaces']=set()
+    for _interface in config['ban_interfaces']:
+        iResult['ban_interfaces'].add(_interface)
+    e3loger.debug('banned interfaces:%s'%(iResult['ban_interfaces']))
+    iResult['update_lanzones']=set()
+    for _lanzone in config['update_lanzones']:
+        iResult['update_lanzones'].add(_lanzone)
+    e3loger.debug('lanzones to be updated:%s'%(iResult['update_lanzones']))
 
+def _add_lanzones_to_ether_lan(ether_service_id,lanzones_to_be_added):
+    #filter topology edges,only keep those edges whose service_id is equal to e_lan's id
+    topology_edges=invt_list_vswitch_topology_edges()
+    iResult['topology_edges']=dict()
+    for _edge_id in topology_edges:
+        edge=topology_edges[_edge_id]
+        if edge.service_id!=e_lan.id:
+            continue
+        iResult['topology_edges'][_edge_id]=edge
+     
+    
 def create_ether_lan_topology(config, iResult):
     _prefetch_create_config(config, iResult)
     _create_ether_lan_topology(config, iResult)

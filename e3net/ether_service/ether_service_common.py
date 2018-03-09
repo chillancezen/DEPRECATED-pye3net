@@ -39,6 +39,14 @@ class EtherServiceCreateConfig(CommonConfig):
         self.ban_lanzones = []
         self.ban_interfaces = []
 
+class EtherLANServiceUpdateConfig(CommonConfig):
+    def __init__(self):
+        self.ether_lan_service_id=None
+        self.operation=None
+        self.ban_hosts=[]
+        self.ban_lanzones=[]
+        self.ban_interfaces=[]
+        self.update_lanzones=[]
 
 def util_create_interface(host_name, lanzone_name, dev_address):
     from e3net.inventory.invt_vswitch_lan_zone import invt_list_vswitch_lan_zones

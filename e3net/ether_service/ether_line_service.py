@@ -9,7 +9,7 @@ from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
 from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
 from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
 from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
-from e3net.module.mod_common import EtherServiceCreateConfig
+from e3net.ether_service.ether_service_common import EtherServiceCreateConfig
 from e3net.inventory.invt_vswitch_lan_zone import invt_get_vswitch_lan_zone
 from e3net.inventory.invt_vswitch_host import invt_get_vswitch_host
 from e3net.inventory.invt_vswitch_interface import invt_get_vswitch_interface
