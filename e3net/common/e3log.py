@@ -39,7 +39,7 @@ def _make_sure_file_exist(filepath):
 
 def _get_e3loger(filename):
     logFormatter = logging.Formatter(
-        "%(asctime)s %(levelname)s %(filename)s:%(lineno)d %(message)s")
+        "%(asctime)s %(levelname)s %(filename)s:%(lineno)d [%(thread)d %(funcName)s()] %(message)s")
     rootLogger = logging.getLogger(filename)
     level = get_config(default_conf, 'default', 'log_level')
     path = get_config(default_conf, 'default', 'log_path')

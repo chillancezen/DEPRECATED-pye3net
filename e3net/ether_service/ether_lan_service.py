@@ -369,6 +369,7 @@ def _validate_ether_lan_topology(config, iResult):
     for _lanzone_id in initial_lanzone_set:
         assert (_lanzone_id in used)
 
+
 def _create_ether_lan_topology_edge(config, iResult):
     interfaces = iResult['interfaces']
     permanent_lanzone_set = iResult['permanent_lanzone_set']
@@ -384,38 +385,322 @@ def _create_ether_lan_topology_edge(config, iResult):
         spec['service_id'] = e_lan.id
         invt_register_vswitch_topology_edge(spec)
 
-def _prefetch_ether_lan_update_config(config,iResult):
-    iResult['ether_service']=invt_get_vswitch_ether_service(config['ether_lan_service_id'])
-    assert(iResult['ether_service'].service_type==E3NET_ETHER_SERVICE_TYPE_LAN)
-    iResult['operation']=config['operation']
-    iResult['ban_hosts']=set()
+
+def _prefetch_ether_lan_update_config(config, iResult):
+    iResult['ether_service'] = invt_get_vswitch_ether_service(
+        config['ether_lan_service_id'])
+    assert (
+        iResult['ether_service'].service_type == E3NET_ETHER_SERVICE_TYPE_LAN)
+    e3loger.debug('target ether_service id:%s' %
+                  (config['ether_lan_service_id']))
+    iResult['operation'] = config['operation']
+    e3loger.debug('operation:%s' % (iResult['operation']))
+    iResult['ban_hosts'] = set()
     for _host in config['ban_hosts']:
         iResult['ban_hosts'].add(_host)
-    e3loger.debug('banned hosts:%s'%(iResult['ban_hosts']))
-    iResult['ban_lanzones']=set()
+    e3loger.debug('banned hosts:%s' % (iResult['ban_hosts']))
+    iResult['ban_lanzones'] = set()
     for _lanzone in config['ban_lanzones']:
         iResult['ban_lanzones'].add(_lanzone)
-    e3loger.debug('banned lanzones:%s'%(iResult['ban_lanzones']))
-    iResult['ban_interfaces']=set()
+    e3loger.debug('banned lanzones:%s' % (iResult['ban_lanzones']))
+    iResult['ban_interfaces'] = set()
     for _interface in config['ban_interfaces']:
         iResult['ban_interfaces'].add(_interface)
-    e3loger.debug('banned interfaces:%s'%(iResult['ban_interfaces']))
-    iResult['update_lanzones']=set()
+    e3loger.debug('banned interfaces:%s' % (iResult['ban_interfaces']))
+    iResult['update_lanzones'] = set()
     for _lanzone in config['update_lanzones']:
         iResult['update_lanzones'].add(_lanzone)
-    e3loger.debug('lanzones to be updated:%s'%(iResult['update_lanzones']))
+    e3loger.debug('lanzones to be updated:%s' % (iResult['update_lanzones']))
+    for _lanzone_id in iResult['update_lanzones']:
+        assert (_lanzone_id not in iResult['ban_lanzones'])
 
-def _add_lanzones_to_ether_lan(ether_service_id,lanzones_to_be_added):
-    #filter topology edges,only keep those edges whose service_id is equal to e_lan's id
-    topology_edges=invt_list_vswitch_topology_edges()
-    iResult['topology_edges']=dict()
+
+def _add_lanzones_to_ether_lan(config, iResult):
+    e_lan = iResult['ether_service']
+    update_lanzones = iResult['update_lanzones']
+    assert (len(update_lanzones) >= 1)
+    assert (iResult['operation'] == 'add')
+    #prepare the topology elements
+    infinite_weight = 0x7fffffff
+    lanzones = invt_list_vswitch_lan_zones()
+    hosts = invt_list_vswitch_hosts()
+    interfaces = invt_list_vswitch_interfaces()
+    edges = invt_list_vswitch_topology_edges()
+    topology_edges = dict()
+    iface_weight = dict()
+    e3loger.debug('original lanzones set:')
+    for lanzone_id in lanzones:
+        e3loger.debug('\t%s' % (lanzones[lanzone_id]))
+    e3loger.debug('original host set:')
+    for host_id in hosts:
+        e3loger.debug('\t%s' % (hosts[host_id]))
+    e3loger.debug('original interface set:')
+    for iface_id in interfaces:
+        e3loger.debug('\t%s' % (interfaces[iface_id]))
+    #calculate the weight of all existing topology edge
+    for iface_id in interfaces:
+        iface_weight[iface_id] = 0
+    for edge_id in edges:
+        edge = edges[edge_id]
+        iface0 = edge.interface0
+        iface1 = edge.interface1
+        iface_weight[iface0] = iface_weight[iface0] + 1
+        iface_weight[iface1] = iface_weight[iface1] + 1
+    e3loger.debug('interface weight:')
+    for iface_id in iface_weight:
+        e3loger.debug('\t%s:%s' % (iface_id, iface_weight[iface_id]))
+    #filter the topology whose service id is the one we are operating
+    for _edge_id in edges:
+        edge = edges[_edge_id]
+        if edge.service_id == e_lan.id:
+            topology_edges[_edge_id] = edge
+    e3loger.debug('existing topology edges for service:%s' % (e_lan))
     for _edge_id in topology_edges:
-        edge=topology_edges[_edge_id]
-        if edge.service_id!=e_lan.id:
+        e3loger.debug('\t%s' % (topology_edges[_edge_id]))
+    #
+    #to improve the efficiency to search interfaces with lanzone/host
+    #split interfaces list into these two maps. note this will ve used several times
+    #
+    lanzone_2_iface = dict()
+    host_2_iface = dict()
+    for _iface_id in interfaces:
+        iface = interfaces[_iface_id]
+        lanzone_id = iface.lanzone_id
+        host_id = iface.host_id
+        if lanzone_id not in lanzone_2_iface:
+            lanzone_2_iface[lanzone_id] = set()
+        assert (lanzone_id in lanzone_2_iface)
+        lanzone_2_iface[lanzone_id].add(_iface_id)
+        if host_id not in host_2_iface:
+            host_2_iface[host_id] = set()
+        assert (host_id in host_2_iface)
+        host_2_iface[host_id].add(_iface_id)
+    e3loger.debug('lanzone to interface mapping:')
+    for lanzone_id in lanzone_2_iface:
+        e3loger.debug('    lanzone id:%s' % (lanzone_id))
+        for iface_id in lanzone_2_iface[lanzone_id]:
+            e3loger.debug('        %s' % (iface_id))
+    e3loger.debug('host to interface mapping:')
+    for host_id in host_2_iface:
+        e3loger.debug('   host id:%s' % (host_id))
+        for iface_id in host_2_iface[host_id]:
+            e3loger.debug('        %s' % (iface_id))
+    #
+    #setup intermediate variables
+    #
+    permanent_lanzone_set = dict()
+    temporary_lanzone_set = set()
+    unused_lanzone_set = set()
+    _local_degree = dict()
+    start_lanzone_id = None
+    #recover the environment to remuse the algorithm
+    for _edge_id in topology_edges:
+        edge = topology_edges[_edge_id]
+        lanzone0_id = interfaces[edge.interface0].lanzone_id
+        lanzone1_id = interfaces[edge.interface1].lanzone_id
+        _local_degree[
+            lanzone0_id] = 1 if lanzone0_id not in _local_degree else _local_degree[lanzone0_id] + 1
+        _local_degree[
+            lanzone1_id] = 1 if lanzone1_id not in _local_degree else _local_degree[lanzone1_id] + 1
+    for _lanzone_id in _local_degree:
+        if _local_degree[_lanzone_id] == 1:
+            lanzone = lanzones[_lanzone_id]
+            assert (lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER)
+            start_lanzone_id = _lanzone_id
+            break
+    if not start_lanzone_id:
+        assert (len(update_lanzones) > 1)
+        start_lanzone_id = list(update_lanzones)[-1]
+    permanent_lanzone_set[start_lanzone_id] = (0, (None, None, None))
+    while True:
+        _should_terminate = True
+        for _edge_id in topology_edges:
+            edge = topology_edges[_edge_id]
+            lanzone0_id = interfaces[edge.interface0].lanzone_id
+            lanzone1_id = interfaces[edge.interface1].lanzone_id
+            if lanzone0_id in permanent_lanzone_set and lanzone1_id in permanent_lanzone_set:
+                continue
+            if lanzone0_id in permanent_lanzone_set:
+                host_id = interfaces[edge.interface0].host_id
+                permanent_lanzone_set[lanzone1_id] = (0, (edge.interface1,
+                                                          host_id,
+                                                          edge.interface0))
+                _should_terminate = False
+            elif lanzone1_id in permanent_lanzone_set:
+                host_id = interfaces[edge.interface1].host_id
+                permanent_lanzone_set[lanzone0_id] = (0, (edge.interface0,
+                                                          host_id,
+                                                          edge.interface1))
+                _should_terminate = False
+        if _should_terminate:
+            break
+    for _lanzone_id in _local_degree:
+        assert (_lanzone_id in permanent_lanzone_set)
+    #continue specify temporary and unused lanzone sets
+    for _lanzone_id in lanzones:
+        lanzone = lanzones[_lanzone_id]
+        if _lanzone_id in permanent_lanzone_set:
             continue
-        iResult['topology_edges'][_edge_id]=edge
-     
-    
+        elif _lanzone_id in iResult['ban_lanzones']:
+            unused_lanzone_set.add(_lanzone_id)
+        elif lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and _lanzone_id not in iResult['update_lanzones']:
+            unused_lanzone_set.add(_lanzone_id)
+        else:
+            temporary_lanzone_set.add(_lanzone_id)
+    e3loger.debug('start lanzone id:%s' % (start_lanzone_id))
+    e3loger.debug('permanent lanzone set:%s' % (permanent_lanzone_set))
+    e3loger.debug('temporary lanzone set:%s' % (temporary_lanzone_set))
+    e3loger.debug('unused_lanzone_set:%s' % (unused_lanzone_set))
+    #recover the degree structure with existing topology edges
+    g_degree = dict()
+    for _edge_id in topology_edges:
+        edge = topology_edges[_edge_id]
+        lanzone0_id = interfaces[edge.interface0].lanzone_id
+        lanzone1_id = interfaces[edge.interface1].lanzone_id
+        g_degree[
+            lanzone0_id] = 1 if lanzone0_id not in g_degree else g_degree[lanzone0_id] + 1
+        g_degree[
+            lanzone1_id] = 1 if lanzone1_id not in g_degree else g_degree[lanzone1_id] + 1
+    #resume Prim's algorithm with current layout
+    while True:
+        _next_least_edge_weight = infinite_weight
+        _next_lanzone_id = None
+        _next_iface0_id = None
+        _next_iface1_id = None
+        _next_host_id = None
+        for p_lanzone_id in permanent_lanzone_set:
+            e3loger.debug('choose permanent lanzone:%s' % (p_lanzone_id))
+            #find the bottom half of the topology edge
+            intermediate_host = dict()
+            for _iface_id in lanzone_2_iface[p_lanzone_id]:
+                if _iface_id in iResult['ban_interfaces']:
+                    continue
+                iface = interfaces[_iface_id]
+                if e_lan.link_type == E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
+                    if iface.interface_type != E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or iface_weight[_iface_id] != 0:
+                        continue
+                else:
+                    if iface.interface_type != E3VSWITCH_INTERFACE_TYPE_SHARED:
+                        continue
+                if iface.host_id in iResult['ban_hosts']:
+                    continue
+                if iface.host_id not in intermediate_host:
+                    intermediate_host[iface.host_id] = _iface_id
+                elif iface_weight[_iface_id] < iface_weight[intermediate_host[iface.
+                                                                              host_id]]:
+                    intermediate_host[iface.host_id] = _iface_id
+            e3loger.debug('intermediate_host:%s' % (intermediate_host))
+            #find the top half of the topology edge
+            intermediate_lanzone = dict()
+            for _host_id in intermediate_host:
+                host = hosts[_host_id]
+                for _iface_id in host_2_iface[_host_id]:
+                    iface = interfaces[_iface_id]
+                    if _iface_id in iResult['ban_interfaces']:
+                        continue
+                    if iface.lanzone_id not in temporary_lanzone_set:
+                        continue
+                    if e_lan.link_type == E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
+                        if iface.interface_type != E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or iface_weight[_iface_id] != 0:
+                            continue
+                    else:
+                        if iface.interface_type != E3VSWITCH_INTERFACE_TYPE_SHARED:
+                            continue
+                    if iface.lanzone_id not in intermediate_lanzone:
+                        intermediate_lanzone[iface.lanzone_id] = (
+                            _iface_id, _host_id, intermediate_host[_host_id])
+                    elif iface_weight[_iface_id]+iface_weight[intermediate_host[_host_id]]< \
+                        iface_weight[intermediate_lanzone[iface.lanzone_id][0]]+ \
+                        iface_weight[intermediate_lanzone[iface.lanzone_id][2]]:
+                        intermediate_lanzone[iface.lanzone_id] = (
+                            _iface_id, _host_id, intermediate_host[_host_id])
+            e3loger.debug('intermediate_lanzone:%s' % (intermediate_lanzone))
+            #find the least weighted topology edge for p_lanzone_id
+            for _immediate_lanzone_id in intermediate_lanzone:
+                iface0_id, host_id, iface1_id = intermediate_lanzone[
+                    _immediate_lanzone_id]
+                _edge_weight = iface_weight[iface0_id] + iface_weight[iface1_id]
+                #prevent customer lanzone from being a immediate backbone lanzone
+                #i.e. if the customer lanzone is already in the permanent lanzone set,
+                #skip it.
+                _iface1 = interfaces[iface1_id]
+                if _iface1.lanzone_id in g_degree and \
+                    lanzones[_iface1.lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER \
+                    and g_degree[_iface1.lanzone_id]==1:
+                    continue
+                #two customer lanzones can not constitute a topology edge
+                _iface0 = interfaces[iface0_id]
+                if lanzones[_iface1.lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER \
+                    and lanzones[_iface0.lanzone_id].zone_type==E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER:
+                    continue
+                if not _next_lanzone_id or _edge_weight < _next_least_edge_weight:
+                    _next_lanzone_id = _immediate_lanzone_id
+                    _next_iface0_id = iface0_id
+                    _next_iface1_id = iface1_id
+                    _next_host_id = host_id
+                    _next_least_edge_weight = _edge_weight
+        if not _next_lanzone_id:
+            break
+        #update g_degree for every edge
+        if _next_lanzone_id not in g_degree:
+            g_degree[_next_lanzone_id] = 1
+        else:
+            g_degree[_next_lanzone_id] = g_degree[_next_lanzone_id] + 1
+        iface1 = interfaces[_next_iface1_id]
+        if iface1.lanzone_id not in g_degree:
+            g_degree[iface1.lanzone_id] = 1
+        else:
+            g_degree[iface1.lanzone_id] = g_degree[iface1.lanzone_id] + 1
+        permanent_lanzone_set[_next_lanzone_id] = (_next_least_edge_weight,
+                                                   (_next_iface0_id,
+                                                    _next_host_id,
+                                                    _next_iface1_id))
+        temporary_lanzone_set.remove(_next_lanzone_id)
+        e3loger.debug('add topology %s:%s' %
+                      (_next_lanzone_id,
+                       permanent_lanzone_set[_next_lanzone_id]))
+    #remove redudance lanzones and edges
+    while True:
+        should_terminate = True
+        degree = dict()
+        for lanzone_id in permanent_lanzone_set:
+            weight, path = permanent_lanzone_set[lanzone_id]
+            iface0_id, host_id, iface1_id = path
+            if not host_id:
+                continue
+            iface1 = interfaces[iface1_id]
+            if lanzone_id not in degree:
+                degree[lanzone_id] = 1
+            else:
+                degree[lanzone_id] = degree[lanzone_id] + 1
+            if iface1.lanzone_id not in degree:
+                degree[iface1.lanzone_id] = 1
+            else:
+                degree[iface1.lanzone_id] = degree[iface1.lanzone_id] + 1
+        for lanzone_id in degree:
+            lanzone = lanzones[lanzone_id]
+            if degree[lanzone_id] == 1 and lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
+                del permanent_lanzone_set[lanzone_id]
+                should_terminate = False
+        if should_terminate:
+            break
+    for lanzone_id in permanent_lanzone_set:
+        e3loger.debug('lanzone id:%s %s  %s' %
+                      (lanzone_id, lanzones[lanzone_id].name,
+                       permanent_lanzone_set[lanzone_id]))
+    iResult['permanent_lanzone_set'] = permanent_lanzone_set
+    iResult['temporary_lanzone_set'] = temporary_lanzone_set
+    iResult['start_lanzone_id'] = start_lanzone_id
+    iResult['lanzones'] = lanzones
+    iResult['hosts'] = hosts
+    iResult['interfaces'] = interfaces
+
+
+def update_ether_lan_topology(config, iResult):
+    _prefetch_ether_lan_update_config(config, iResult)
+    _add_lanzones_to_ether_lan(config, iResult)
+
+
 def create_ether_lan_topology(config, iResult):
     _prefetch_create_config(config, iResult)
     _create_ether_lan_topology(config, iResult)
