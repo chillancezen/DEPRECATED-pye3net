@@ -407,18 +407,25 @@ def _prefetch_ether_lan_update_config(config, iResult):
     for _interface in config['ban_interfaces']:
         iResult['ban_interfaces'].add(_interface)
     e3loger.debug('banned interfaces:%s' % (iResult['ban_interfaces']))
-    iResult['update_lanzones'] = set()
-    for _lanzone in config['update_lanzones']:
-        iResult['update_lanzones'].add(_lanzone)
-    e3loger.debug('lanzones to be updated:%s' % (iResult['update_lanzones']))
-    for _lanzone_id in iResult['update_lanzones']:
+    iResult['initial_lanzones'] = set()
+    for _lanzone in config['initial_lanzones']:
+        iResult['initial_lanzones'].add(_lanzone)
+    e3loger.debug('lanzones to be updated:%s' % (iResult['initial_lanzones']))
+    for _lanzone_id in iResult['initial_lanzones']:
         assert (_lanzone_id not in iResult['ban_lanzones'])
 
-
+def _add_lanzones_from_ether_lan(config,iResult):
+    e_lan = iResult['ether_service']
+    lanzones = invt_list_vswitch_lan_zones()
+    hosts = invt_list_vswitch_hosts()
+    interfaces = invt_list_vswitch_interfaces()
+    edges = invt_list_vswitch_topology_edges()
+    
+    pass
 def _add_lanzones_to_ether_lan(config, iResult):
     e_lan = iResult['ether_service']
-    update_lanzones = iResult['update_lanzones']
-    assert (len(update_lanzones) >= 1)
+    initial_lanzones = iResult['initial_lanzones']
+    assert (len(initial_lanzones) >= 1)
     assert (iResult['operation'] == 'add')
     #prepare the topology elements
     infinite_weight = 0x7fffffff
@@ -509,8 +516,8 @@ def _add_lanzones_to_ether_lan(config, iResult):
             start_lanzone_id = _lanzone_id
             break
     if not start_lanzone_id:
-        assert (len(update_lanzones) > 1)
-        start_lanzone_id = list(update_lanzones)[-1]
+        assert (len(initial_lanzones) > 1)
+        start_lanzone_id = list(initial_lanzones)[-1]
     permanent_lanzone_set[start_lanzone_id] = (0, (None, None, None))
     while True:
         _should_terminate = True
@@ -543,7 +550,7 @@ def _add_lanzones_to_ether_lan(config, iResult):
             continue
         elif _lanzone_id in iResult['ban_lanzones']:
             unused_lanzone_set.add(_lanzone_id)
-        elif lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and _lanzone_id not in iResult['update_lanzones']:
+        elif lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER and _lanzone_id not in iResult['initial_lanzones']:
             unused_lanzone_set.add(_lanzone_id)
         else:
             temporary_lanzone_set.add(_lanzone_id)
@@ -699,7 +706,7 @@ def _add_lanzones_to_ether_lan(config, iResult):
 def update_ether_lan_topology(config, iResult):
     _prefetch_ether_lan_update_config(config, iResult)
     _add_lanzones_to_ether_lan(config, iResult)
-
+    _validate_ether_lan_topology(config, iResult)
 
 def create_ether_lan_topology(config, iResult):
     _prefetch_create_config(config, iResult)
