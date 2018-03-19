@@ -414,14 +414,118 @@ def _prefetch_ether_lan_update_config(config, iResult):
     for _lanzone_id in iResult['initial_lanzones']:
         assert (_lanzone_id not in iResult['ban_lanzones'])
 
-def _add_lanzones_from_ether_lan(config,iResult):
+def _remove_lanzones_from_ether_lan(config,iResult):
     e_lan = iResult['ether_service']
     lanzones = invt_list_vswitch_lan_zones()
     hosts = invt_list_vswitch_hosts()
     interfaces = invt_list_vswitch_interfaces()
     edges = invt_list_vswitch_topology_edges()
-    
-    pass
+    topology_edges = dict()
+    #filter the topology edge with the given service ID
+    for _edge_id in edges:
+        edge = edges[_edge_id]
+        if edge.service_id == e_lan.id:
+            topology_edges[_edge_id] = edge
+    e3loger.debug('existing topology edges for service:%s' % (e_lan))
+    for _edge_id in topology_edges:
+        e3loger.debug('\t%s' % (topology_edges[_edge_id]))
+    #recover the algorithm environment
+    permanent_lanzone_set = dict()
+    _local_degree = dict()
+    start_lanzone_id = None
+    for _edge_id in topology_edges:
+        edge = topology_edges[_edge_id]
+        lanzone0_id = interfaces[edge.interface0].lanzone_id
+        lanzone1_id = interfaces[edge.interface1].lanzone_id
+        _local_degree[lanzone0_id] = 1 if lanzone0_id not in _local_degree else _local_degree[lanzone0_id] + 1
+        _local_degree[lanzone1_id] = 1 if lanzone1_id not in _local_degree else _local_degree[lanzone1_id] + 1
+    for _lanzone_id in _local_degree:
+        if _local_degree[_lanzone_id] == 1:
+            lanzone = lanzones[_lanzone_id]
+            assert (lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER)
+            start_lanzone_id = _lanzone_id
+            break
+    assert (start_lanzone_id)
+    permanent_lanzone_set[start_lanzone_id] = (0, (None, None, None))
+    while True:
+        _should_terminate = True
+        for _edge_id in topology_edges:
+            edge = topology_edges[_edge_id]
+            lanzone0_id = interfaces[edge.interface0].lanzone_id
+            lanzone1_id = interfaces[edge.interface1].lanzone_id
+            if lanzone0_id in permanent_lanzone_set and lanzone1_id in permanent_lanzone_set:
+                continue
+            if lanzone0_id in permanent_lanzone_set:
+                host_id = interfaces[edge.interface0].host_id
+                permanent_lanzone_set[lanzone1_id] = (0, (edge.interface1, host_id, edge.interface0))
+                _should_terminate = False
+            elif lanzone1_id in permanent_lanzone_set:
+                host_id = interfaces[edge.interface1].host_id
+                permanent_lanzone_set[lanzone0_id] = (0, (edge.interface0, host_id, edge.interface1))
+                _should_terminate = False
+        if _should_terminate:
+            break
+    for _lanzone_id in _local_degree:
+        assert (_lanzone_id in permanent_lanzone_set)
+    for _lanzone_id in iResult['initial_lanzones']:
+        lanzone = lanzones[_lanzone_id]
+        assert (lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER)
+        assert (_lanzone_id in permanent_lanzone_set)
+    deleted_path=list()
+    #remove those lanzones that are supposed to be trimmed
+    #before removing the redundant backbone lanzones, remove those lanzones in iResult.initial_lanzones
+    for _lanzone_id in iResult['initial_lanzones']:
+        weight, path = permanent_lanzone_set[_lanzone_id]
+        iface0_id, host_id, iface1_id = path
+        if not host_id:
+            #special case that this lanzone previously is chosen as the source
+            adjacent_lanzone_id=None
+            for __lanzone_id in permanent_lanzone_set:
+                __weight, __path = permanent_lanzone_set[__lanzone_id]
+                __iface0_id, __host_id, __iface1_id = __path
+                if not __host_id:
+                    continue
+                __adjacent_lanzone0_id = interfaces[__iface0_id].lanzone_id
+                __adjacent_lanzone1_id = interfaces[__iface1_id].lanzone_id
+                assert (__adjacent_lanzone0_id == __lanzone_id)
+                if __adjacent_lanzone1_id == _lanzone_id:
+                    adjacent_lanzone_id = __adjacent_lanzone0_id
+                    break
+            assert (adjacent_lanzone_id)
+            __, __path = permanent_lanzone_set[adjacent_lanzone_id]
+            __iface0_id, __host_id, __iface1_id = __path
+            deleted_path.append((__iface0_id,__iface1_id))
+            del permanent_lanzone_set[_lanzone_id]
+            permanent_lanzone_set[adjacent_lanzone_id]=(0, (None, None, None))
+        else:
+            lanzone0_id = interfaces[iface0_id].lanzone_id
+            assert (lanzone0_id == _lanzone_id)
+            deleted_path.append((iface0_id,iface1_id))
+            del permanent_lanzone_set[lanzone0_id]
+    #remove those unused backbone lanzones
+    while True:
+        should_terminate = True
+        degree = dict()
+        for _lanzone_id in permanent_lanzone_set:
+            _weight, _path = permanent_lanzone_set[_lanzone_id]
+            _iface0_id, host_id, iface1_id = _path
+            if not host_id:
+                continue
+            _iface1 = interfaces[iface1_id]
+            degree[_lanzone_id] = 1 if _lanzone_id not in degree else degree[_lanzone_id] + 1
+            degree[_iface1.lanzone_id] = 1 if _iface1.lanzone_id not in degree else degree[_iface1.lanzone_id] +1
+        for _lanzone_id in degree:
+            lanzone = lanzones[_lanzone_id]
+            if degree[_lanzone_id] == 1 and lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
+                _, _path = permanent_lanzone_set[_lanzone_id]
+                _iface0_id, host_id, iface1_id = _path
+                deleted_path.append((_iface0_id, iface1_id))
+                del permanent_lanzone_set[_lanzone_id]
+                should_terminate = False
+        if should_terminate:
+            break
+    for i in deleted_path:
+        print(i)
 def _add_lanzones_to_ether_lan(config, iResult):
     e_lan = iResult['ether_service']
     initial_lanzones = iResult['initial_lanzones']
@@ -666,7 +770,7 @@ def _add_lanzones_to_ether_lan(config, iResult):
         e3loger.debug('add topology %s:%s' %
                       (_next_lanzone_id,
                        permanent_lanzone_set[_next_lanzone_id]))
-    #remove redudance lanzones and edges
+    #remove redundant lanzones and edges
     while True:
         should_terminate = True
         degree = dict()
@@ -702,8 +806,11 @@ def _add_lanzones_to_ether_lan(config, iResult):
     iResult['hosts'] = hosts
     iResult['interfaces'] = interfaces
 
+def remove_lanzones_from_ether_lan_topology(config, iResult):
+    _prefetch_ether_lan_update_config(config, iResult)
+    _remove_lanzones_from_ether_lan(config, iResult)
 
-def update_ether_lan_topology(config, iResult):
+def add_lanzones_to_ether_lan_topology(config, iResult):
     _prefetch_ether_lan_update_config(config, iResult)
     _add_lanzones_to_ether_lan(config, iResult)
     _validate_ether_lan_topology(config, iResult)
