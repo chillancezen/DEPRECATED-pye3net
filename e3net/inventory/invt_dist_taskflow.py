@@ -150,7 +150,7 @@ class e3_taskflow:
                 self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_ISSUED
                 #prior to the flow,synchronize state in case the tasks need it
                 if auto_sync:
-                    self.self.sync_state()
+                    self.sync_state()
                 self.engine.run()
                 if self.callback:
                     self.callback(self)
