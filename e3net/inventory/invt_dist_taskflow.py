@@ -23,7 +23,8 @@ invt_taskflow_factory = dict()
 root_key = 'taskflow'
 E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN = 'unknown'
 E3TASKFLOW_SCHEDULE_STATUS_ISSUED = 'issued'
-
+E3TASKFLOW_SCHEDULE_STATUS_SUCCESSFUL = 'successful'
+E3TASKFLOW_SCHEDULE_STATUS_FAILED = 'failed'
 e3_taskflow_nr_worker = 4
 
 
@@ -68,10 +69,12 @@ def taskflow_base_worker(arg):
                 book=book,
                 store=self.store)
             self.engine.run()
+            self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_SUCCESSFUL
             if self.callback:
                 self.callback(self)
         except Exception as e:
             self.failure = str(e)
+            self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_FAILED
             if self.callback:
                 self.callback(self, e)
         finally:
@@ -152,6 +155,7 @@ class e3_taskflow:
                 if auto_sync:
                     self.sync_state()
                 self.engine.run()
+                self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_SUCCESSFUL
                 if self.callback:
                     self.callback(self)
             else:
@@ -159,6 +163,7 @@ class e3_taskflow:
                 _taskflow_queue.put(self)
         except Exception as e:
             self.failure = str(e)
+            self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_FAILED
             if self.callback:
                 self.callback(self, e)
             else:

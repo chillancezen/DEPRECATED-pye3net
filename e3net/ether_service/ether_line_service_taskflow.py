@@ -50,12 +50,12 @@ class e_line_tf_create_ether_service(task.Task):
             except:
                 pass
 
-class e_line_cf_create_topology(task.Task):
+class e_line_tf_create_topology(task.Task):
     def execute(self, config, iResult):
         _prefetch_create_config(config, iResult)
         _create_ether_line_topology(config, iResult)
 
-class e_line_cf_commit_topology(task.Task):
+class e_line_tf_commit_topology(task.Task):
     def execute(self, config, iResult):
         _validate_ether_line_topology(config, iResult)
         _create_ether_line_topology_edge(config, iResult)
@@ -73,8 +73,8 @@ ETHER_LINE_TASKFLOW_CREATION='ether_line_creation'
 def generate_ether_line_creation_flow():
     lf = linear_flow.Flow(ETHER_LINE_TASKFLOW_CREATION)
     lf.add(e_line_tf_create_ether_service())
-    lf.add(e_line_cf_create_topology())
-    lf.add(e_line_cf_commit_topology())
+    lf.add(e_line_tf_create_topology())
+    lf.add(e_line_tf_commit_topology())
     return lf
 
 register_taskflow_category(ETHER_LINE_TASKFLOW_CREATION, generate_ether_line_creation_flow)

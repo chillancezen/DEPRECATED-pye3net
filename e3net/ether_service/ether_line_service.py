@@ -34,29 +34,27 @@ e3loger = get_e3loger('e3vswitch_controller')
 #this phase will prepare lanzones/hosts/interfaces in iResult
 #and remove any duplicated items
 def _prefetch_create_config(config, iResult):
-    iResult['ether_service'] = invt_get_vswitch_ether_service(
-        iResult['service_id'])
     assert (len(config['initial_lanzones']))
     #prepare all essential object
     #this will remove those duplicated ITEM. and may raise an exception if not found
-    iResult['initial_lanzones'] = set()
+    iResult['initial_lanzones'] = list()
     for l in config['initial_lanzones']:
-        iResult['initial_lanzones'].add(l)
+        iResult['initial_lanzones'].append(l)
     e3loger.debug('initial lanzones:%s' % (iResult['initial_lanzones']))
 
-    iResult['ban_hosts'] = set()
+    iResult['ban_hosts'] = list()
     for h in config['ban_hosts']:
-        iResult['ban_hosts'].add(h)
+        iResult['ban_hosts'].append(h)
     e3loger.debug('banned hosts:%s' % (iResult['ban_hosts']))
 
-    iResult['ban_lanzones'] = set()
+    iResult['ban_lanzones'] = list()
     for l in config['ban_lanzones']:
-        iResult['ban_lanzones'].add(l)
+        iResult['ban_lanzones'].append(l)
     e3loger.debug('banned lanzones:%s' % (iResult['ban_lanzones']))
 
-    iResult['ban_interfaces'] = set()
+    iResult['ban_interfaces'] = list()
     for i in config['ban_interfaces']:
-        iResult['ban_interfaces'].add(i)
+        iResult['ban_interfaces'].append(i)
     e3loger.debug('banned interfaces:%s' % (iResult['ban_interfaces']))
     #make sure initial_lanzones do not overlap with ban_lanzones
     bl = iResult['ban_lanzones']
@@ -71,7 +69,7 @@ def _create_ether_line_topology(config, iResult):
         return
     assert (len(iResult['initial_lanzones']) == 2)
     assert (len(config['initial_lanzones']) == 2)
-    e_line = iResult['ether_service']
+    e_line = invt_get_vswitch_ether_service(iResult['service_id'])
     #
     #using Dijkstra Algorithm to determine the shortest path
     #between the two customer lan zones.
@@ -85,7 +83,7 @@ def _create_ether_line_topology(config, iResult):
     edges = invt_list_vswitch_topology_edges()
     iface_weight = dict()
     permanent_lanzone_set = dict()
-    permanent_host_set = set()
+    permanent_host_set = list()
     temporary_lanzone_set = dict()
     start_lanzone = config['initial_lanzones'][0]
     end_lanzone = config['initial_lanzones'][1]
@@ -128,8 +126,7 @@ def _create_ether_line_topology(config, iResult):
     #
     for lanzone_id in lanzones:
         if lanzone_id != start_lanzone:
-            temporary_lanzone_set[lanzone_id] = (infinite_weight, (None, None,
-                                                                   None))
+            temporary_lanzone_set[lanzone_id] = (infinite_weight, (None, None, None))
         else:
             temporary_lanzone_set[lanzone_id] = (0, (None, None, None))
     #
@@ -169,7 +166,7 @@ def _create_ether_line_topology(config, iResult):
         #now target_lanzone_id is the one that should go to permanent lanzone set
         weight, path = temporary_lanzone_set[target_lanzone_id]
         iface0, host, iface1 = path
-        permanent_host_set.add(host)
+        permanent_host_set.append(host)
         permanent_lanzone_set[target_lanzone_id] = (weight, path)
         del temporary_lanzone_set[target_lanzone_id]
         if target_lanzone_id == end_lanzone:
@@ -255,21 +252,18 @@ def _create_ether_line_topology(config, iResult):
     iResult['permanent_lanzone_set'] = permanent_lanzone_set
     iResult['temporary_lanzone_set'] = temporary_lanzone_set
     iResult['permanent_host_set'] = permanent_host_set
-    iResult['lanzones'] = lanzones
-    iResult['hosts'] = hosts
-    iResult['interfaces'] = interfaces
 
 
 def _validate_ether_line_topology(config, iResult):
     permanent_lanzone_set = iResult['permanent_lanzone_set']
     temporary_lanzone_set = iResult['temporary_lanzone_set']
     permanent_host_set = iResult['permanent_host_set']
-    lanzones = iResult['lanzones']
-    hosts = iResult['hosts']
-    interfaces = iResult['interfaces']
+    lanzones = invt_list_vswitch_lan_zones()
+    hosts = invt_list_vswitch_hosts()
+    interfaces = invt_list_vswitch_interfaces()
     start_lanzone_id = config['initial_lanzones'][0]
     end_lanzone_id = config['initial_lanzones'][1]
-    e_line = iResult['ether_service']
+    e_line = invt_get_vswitch_ether_service(iResult['service_id'])
     iface_type = E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
     if e_line.link_type != E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
         iface_type = E3VSWITCH_INTERFACE_TYPE_SHARED
@@ -293,12 +287,12 @@ def _validate_ether_line_topology(config, iResult):
 
 def _create_ether_line_topology_edge(config, iResult):
     permanent_lanzone_set = iResult['permanent_lanzone_set']
-    lanzones = iResult['lanzones']
-    hosts = iResult['hosts']
-    interfaces = iResult['interfaces']
+    lanzones = invt_list_vswitch_lan_zones()
+    hosts = invt_list_vswitch_hosts()
+    interfaces = invt_list_vswitch_interfaces()
     start_lanzone_id = config['initial_lanzones'][0]
     end_lanzone_id = config['initial_lanzones'][1]
-    e_line = iResult['ether_service']
+    e_line = invt_get_vswitch_ether_service(iResult['service_id'])
     target_lanzone_id = end_lanzone_id
     while True:
         weight, path = permanent_lanzone_set[target_lanzone_id]
@@ -311,7 +305,6 @@ def _create_ether_line_topology_edge(config, iResult):
         spec['service_id'] = e_line.id
         invt_register_vswitch_topology_edge(spec)
         target_lanzone_id = interfaces[iface1_id].lanzone_id
-
 
 def create_ether_line_topology(config, iResult):
     _prefetch_create_config(config, iResult)
