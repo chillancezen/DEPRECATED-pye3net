@@ -36,14 +36,11 @@ e3loger = get_e3loger('e3vswitch_controller')
 
 
 def _create_ether_lan_topology(config, iResult):
-    if len(iResult['initial_lanzones']) == 1:
-        return
     assert (len(iResult['initial_lanzones']) >= 2)
-    assert (len(config['initial_lanzones']) >= 2)
     #
     #use Prim's algorithm to determine the minimum spanning tree aamong lanzones
     #
-    e_lan = iResult['ether_service']
+    e_lan = invt_get_vswitch_ether_service(iResult['service_id'])
     infinite_weight = 0x7fffffff
     lanzones = invt_list_vswitch_lan_zones()
     hosts = invt_list_vswitch_hosts()
@@ -78,21 +75,18 @@ def _create_ether_lan_topology(config, iResult):
     #
     for banned_lanzone in iResult['ban_lanzones']:
         assert (banned_lanzone in lanzones)
-        del lanzones[banned_lanzone]
         e3loger.debug('banned lanzone:', banned_lanzone)
     #
     #remove the banned hosts
     #
     for banned_host in iResult['ban_hosts']:
         assert (banded_host in hosts)
-        del hosts[banded_host]
         e3loger.debug('banned host:', banded_host)
     #
     #remove the banned Interface
     #
     for banned_iface in iResult['ban_interfaces']:
         assert (banned_iface in interfaces)
-        del interfaces[banned_iface]
         e3loger.debug('banned interface:', banned_iface)
     #
     #to improve the efficiency to search interfaces with lanzone/host
@@ -126,7 +120,7 @@ def _create_ether_lan_topology(config, iResult):
     #setup intermediate variables
     #
     permanent_lanzone_set = dict()
-    temporary_lanzone_set = set()
+    temporary_lanzone_set = list()
     unused_lanzone_set = set()
     start_lanzone_id = config['initial_lanzones'][0]
     for lanzone_id in lanzones:
@@ -137,7 +131,7 @@ def _create_ether_lan_topology(config, iResult):
         elif lanzone_id == start_lanzone_id:
             permanent_lanzone_set[lanzone_id] = (0, (None, None, None))
         else:
-            temporary_lanzone_set.add(lanzone_id)
+            temporary_lanzone_set.append(lanzone_id)
     e3loger.debug('start lanzone id:%s' % (start_lanzone_id))
     e3loger.debug('permanent lanzone set:%s' % (permanent_lanzone_set))
     e3loger.debug('temporary lanzone set:%s' % (temporary_lanzone_set))
@@ -160,7 +154,11 @@ def _create_ether_lan_topology(config, iResult):
             #find the bottom half of the topology edge
             intermediate_host = dict()
             for _iface_id in lanzone_2_iface[p_lanzone_id]:
+                if _iface_id in iResult['ban_interfaces']:
+                    continue
                 iface = interfaces[_iface_id]
+                if iface.host_id in iResult['ban_hosts']:
+                    continue
                 if e_lan.link_type == E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
                     if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
                         iface_weight[_iface_id]!=0:
@@ -180,7 +178,8 @@ def _create_ether_lan_topology(config, iResult):
                 host = hosts[_host_id]
                 for _iface_id in host_2_iface[_host_id]:
                     iface = interfaces[_iface_id]
-                    if iface.lanzone_id not in temporary_lanzone_set:
+                    if iface.lanzone_id not in temporary_lanzone_set or \
+                        iface.lanzone_id in iResult['ban_lanzones']:
                         continue
                     if e_lan.link_type == E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
                         if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
@@ -277,20 +276,17 @@ def _create_ether_lan_topology(config, iResult):
     iResult['permanent_lanzone_set'] = permanent_lanzone_set
     iResult['temporary_lanzone_set'] = temporary_lanzone_set
     iResult['start_lanzone_id'] = start_lanzone_id
-    iResult['lanzones'] = lanzones
-    iResult['hosts'] = hosts
-    iResult['interfaces'] = interfaces
 
 
 def _validate_ether_lan_topology(config, iResult):
-    lanzones = iResult['lanzones']
-    hosts = iResult['hosts']
-    interfaces = iResult['interfaces']
+    lanzones = invt_list_vswitch_lan_zones()
+    hosts = invt_list_vswitch_hosts()
+    interfaces = invt_list_vswitch_interfaces()
     start_lanzone_id = iResult['start_lanzone_id']
     temporary_lanzone_set = iResult['temporary_lanzone_set']
     permanent_lanzone_set = iResult['permanent_lanzone_set']
     initial_lanzone_set = iResult['initial_lanzones']
-    e_lan = iResult['ether_service']
+    e_lan = invt_get_vswitch_ether_service(iResult['service_id'])
     iface_type = E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
     if e_lan.link_type != E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
         iface_type = E3VSWITCH_INTERFACE_TYPE_SHARED
@@ -371,9 +367,9 @@ def _validate_ether_lan_topology(config, iResult):
 
 
 def _create_ether_lan_topology_edge(config, iResult):
-    interfaces = iResult['interfaces']
+    interfaces = invt_list_vswitch_interfaces()
     permanent_lanzone_set = iResult['permanent_lanzone_set']
-    e_lan = iResult['ether_service']
+    e_lan = invt_get_vswitch_ether_service(iResult['service_id'])
     for _lanzone_id in permanent_lanzone_set:
         _, _path = permanent_lanzone_set[_lanzone_id]
         _iface0_id, _host_id, _iface1_id = _path

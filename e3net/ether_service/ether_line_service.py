@@ -104,21 +104,18 @@ def _create_ether_line_topology(config, iResult):
     #
     for banned_lanzone in iResult['ban_lanzones']:
         assert (banned_lanzone in lanzones)
-        del lanzones[banned_lanzone]
         e3loger.debug('banned lanzone:', banned_lanzone)
     #
     #remove the banned hosts
     #
     for banned_host in iResult['ban_hosts']:
         assert (banded_host in hosts)
-        del hosts[banded_host]
         e3loger.debug('banned host:', banded_host)
     #
     #remove the banned Interface
     #
     for banned_iface in iResult['ban_interfaces']:
         assert (banned_iface in interfaces)
-        del interfaces[banned_iface]
         e3loger.debug('banned interface:', banned_iface)
     #
     #initialize the temporary lanzone set,
@@ -176,8 +173,11 @@ def _create_ether_line_topology(config, iResult):
         #find the possible hosts in the path, and record their weight along with interfaces
         intermediate_host = dict()
         for _iface_id in lanzone_2_iface[p_lanzone_id]:
+            if _iface_id in iResult['ban_interfaces']:
+                continue
             iface = interfaces[_iface_id]
-            if iface.host_id in permanent_host_set:
+            if iface.host_id in permanent_host_set or \
+                iface.host_id in iResult['ban_hosts']:
                 continue
             if e_line.link_type == E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
                 if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
@@ -199,7 +199,8 @@ def _create_ether_line_topology(config, iResult):
             host = hosts[_host_id]
             for _iface_id in host_2_iface[_host_id]:
                 iface = interfaces[_iface_id]
-                if iface.lanzone_id not in temporary_lanzone_set:
+                if iface.lanzone_id not in temporary_lanzone_set or \
+                    iface.lanzone_id in iResult['ban_lanzones']:
                     continue
                 if e_line.link_type == E3NET_ETHER_SERVICE_LINK_EXCLUSIVE:
                     if iface.interface_type!=E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE or \
