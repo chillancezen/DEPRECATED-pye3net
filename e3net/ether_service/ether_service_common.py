@@ -41,7 +41,7 @@ class EtherServiceCreateConfig(CommonConfig):
 
 class EtherLANServiceUpdateConfig(CommonConfig):
     def __init__(self):
-        self.ether_lan_service_id=None
+        self.service_id=None
         self.operation=None
         self.ban_hosts=[]
         self.ban_lanzones=[]
