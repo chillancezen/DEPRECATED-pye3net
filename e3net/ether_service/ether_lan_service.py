@@ -30,6 +30,7 @@ from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_TYPE_LAN
 from e3net.inventory.invt_vswitch_topology_edge import invt_list_vswitch_topology_edges
 from e3net.common.e3log import get_e3loger
 from e3net.inventory.invt_vswitch_topology_edge import invt_register_vswitch_topology_edge
+from e3net.inventory.invt_vswitch_topology_edge import invt_unregister_vswitch_topology_edge
 #share the same config prefetch function
 from e3net.ether_service.ether_line_service import _prefetch_create_config
 e3loger = get_e3loger('e3vswitch_controller')
@@ -285,7 +286,6 @@ def _validate_ether_lan_topology(config, iResult):
     hosts = invt_list_vswitch_hosts()
     interfaces = invt_list_vswitch_interfaces()
     start_lanzone_id = iResult['start_lanzone_id']
-    temporary_lanzone_set = iResult['temporary_lanzone_set']
     permanent_lanzone_set = iResult['permanent_lanzone_set']
     initial_lanzone_set = iResult['initial_lanzones']
     e_lan = invt_get_vswitch_ether_service(iResult['service_id'])
@@ -320,8 +320,14 @@ def _validate_ether_lan_topology(config, iResult):
             assert (degree[lanzone_id] == 1)
         else:
             assert (degree[lanzone_id] > 1)
-    for lanzone_id in initial_lanzone_set:
-        assert (lanzone_id in permanent_lanzone_set)
+    if iResult['operation'] == E_LAN_OPERATION_ADDITION:
+        for lanzone_id in initial_lanzone_set:
+            assert (lanzone_id in permanent_lanzone_set)
+    elif iResult['operation'] == E_LAN_OPERATION_REMOVAL:
+        for lanzone_id in initial_lanzone_set:
+            assert (lanzone_id not in permanent_lanzone_set)
+    else:
+        assert (False)
     #check whether a circle present
     #by search the path in Depth First manner
     vertext = dict()
@@ -364,9 +370,14 @@ def _validate_ether_lan_topology(config, iResult):
             poped_lanzone_id = path_stack.pop()
             e3loger.debug('circle tedection: pop lanzone:%s' %
                           (poped_lanzone_id))
-    for _lanzone_id in initial_lanzone_set:
-        assert (_lanzone_id in used)
-
+    if iResult['operation'] == E_LAN_OPERATION_ADDITION:
+        for _lanzone_id in initial_lanzone_set:
+            assert (_lanzone_id in used)
+    elif iResult['operation'] == E_LAN_OPERATION_REMOVAL:
+        for _lanzone_id in initial_lanzone_set:
+            assert (_lanzone_id not in used)
+    else:
+        assert (False)
 
 def _create_ether_lan_topology_edge(config, iResult):
     interfaces = invt_list_vswitch_interfaces()
@@ -411,8 +422,9 @@ def _prefetch_ether_lan_update_config(config, iResult):
         assert (_lanzone_id not in iResult['ban_lanzones'])
 
 def _remove_lanzones_from_ether_lan(config, iResult):
+    iResult['service_id'] = config['service_id']
     assert (iResult['operation'] == E_LAN_OPERATION_REMOVAL)
-    e_lan = iResult['ether_service']
+    e_lan = invt_get_vswitch_ether_service(config['service_id'])
     lanzones = invt_list_vswitch_lan_zones()
     hosts = invt_list_vswitch_hosts()
     interfaces = invt_list_vswitch_interfaces()
@@ -469,6 +481,7 @@ def _remove_lanzones_from_ether_lan(config, iResult):
         assert (lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER)
         assert (_lanzone_id in permanent_lanzone_set)
     deleted_path=list()
+    print('step0',permanent_lanzone_set)
     #remove those lanzones that are supposed to be trimmed
     #before removing the redundant backbone lanzones, remove those lanzones in iResult.initial_lanzones
     for _lanzone_id in iResult['initial_lanzones']:
@@ -476,7 +489,7 @@ def _remove_lanzones_from_ether_lan(config, iResult):
         iface0_id, host_id, iface1_id = path
         if not host_id:
             #special case that this lanzone previously is chosen as the source
-            adjacent_lanzone_id=None
+            adjacent_lanzone_id = None
             for __lanzone_id in permanent_lanzone_set:
                 __weight, __path = permanent_lanzone_set[__lanzone_id]
                 __iface0_id, __host_id, __iface1_id = __path
@@ -491,14 +504,16 @@ def _remove_lanzones_from_ether_lan(config, iResult):
             assert (adjacent_lanzone_id)
             __, __path = permanent_lanzone_set[adjacent_lanzone_id]
             __iface0_id, __host_id, __iface1_id = __path
-            deleted_path.append((__iface0_id,__iface1_id))
+            deleted_path.append([__iface0_id, __iface1_id])
             del permanent_lanzone_set[_lanzone_id]
-            permanent_lanzone_set[adjacent_lanzone_id]=(0, (None, None, None))
+            permanent_lanzone_set[adjacent_lanzone_id] = (0, (None, None, None))
+            start_lanzone_id = adjacent_lanzone_id
         else:
             lanzone0_id = interfaces[iface0_id].lanzone_id
             assert (lanzone0_id == _lanzone_id)
-            deleted_path.append((iface0_id,iface1_id))
+            deleted_path.append([iface0_id, iface1_id])
             del permanent_lanzone_set[lanzone0_id]
+    print('deleted_path0:',deleted_path,permanent_lanzone_set)
     #remove those unused backbone lanzones
     while True:
         should_terminate = True
@@ -511,18 +526,21 @@ def _remove_lanzones_from_ether_lan(config, iResult):
             _iface1 = interfaces[iface1_id]
             degree[_lanzone_id] = 1 if _lanzone_id not in degree else degree[_lanzone_id] + 1
             degree[_iface1.lanzone_id] = 1 if _iface1.lanzone_id not in degree else degree[_iface1.lanzone_id] +1
+        print('deleted_path1:',deleted_path,permanent_lanzone_set)
         for _lanzone_id in degree:
             lanzone = lanzones[_lanzone_id]
             if degree[_lanzone_id] == 1 and lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
                 _, _path = permanent_lanzone_set[_lanzone_id]
                 _iface0_id, host_id, iface1_id = _path
-                deleted_path.append((_iface0_id, iface1_id))
+                #bookmark here to replace the target lanzone entry if it's the start lanzone id
+                deleted_path.append([_iface0_id, iface1_id])
                 del permanent_lanzone_set[_lanzone_id]
                 should_terminate = False
         if should_terminate:
             break
-    for i in deleted_path:
-        print(i)
+    iResult['permanent_lanzone_set'] = permanent_lanzone_set
+    iResult['start_lanzone_id'] = start_lanzone_id
+    iResult['deleted_path'] = deleted_path
 
 def _add_lanzones_to_ether_lan(config, iResult):
     e_lan = invt_get_vswitch_ether_service(config['service_id'])
@@ -835,7 +853,20 @@ def _synchronize_ether_topology_update(config, iResult):
                 #this is supposed to be not a failure
                 invt_register_vswitch_topology_edge(spec)
     elif iResult['operation'] == E_LAN_OPERATION_REMOVAL:
-        pass
+        for _edge in iResult['deleted_path']:
+            _iface0_id = _edge[0]
+            _iface1_id = _edge[1]
+            target_edge_id = None
+            for _tmp_edge_id in edges:
+                __edge = edges[_tmp_edge_id]
+                if __edge.service_id == service_id:
+                    continue
+                if (__edge.interface0 == _iface0_id and __edge.interface1 == _iface1_id) or \
+                    (__edge.interface0 == _iface1_id and __edge.interface1 == _iface0_id):
+                    target_edge_id = __edge.id
+                    break
+            assert (target_edge_id)
+            invt_unregister_vswitch_topology_edge(target_edge_id)
     else:
         raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT)
 
