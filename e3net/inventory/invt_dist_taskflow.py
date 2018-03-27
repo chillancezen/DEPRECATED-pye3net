@@ -15,6 +15,7 @@ import queue
 import time
 import contextlib
 from e3net.inventory.invt_base import get_inventory_base
+import traceback
 
 _taskflow_backend = None
 _taskflow_queue = queue.Queue()
@@ -73,7 +74,7 @@ def taskflow_base_worker(arg):
             if self.callback:
                 self.callback(self)
         except Exception as e:
-            self.failure = str(e)
+            self.failure = str(traceback.format_exc())
             self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_FAILED
             if self.callback:
                 self.callback(self, e)
@@ -162,7 +163,7 @@ class e3_taskflow:
                 self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_ISSUED
                 _taskflow_queue.put(self)
         except Exception as e:
-            self.failure = str(e)
+            self.failure = str(traceback.format_exc())
             self.schedule_status = E3TASKFLOW_SCHEDULE_STATUS_FAILED
             if self.callback:
                 self.callback(self, e)

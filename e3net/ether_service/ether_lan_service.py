@@ -481,7 +481,6 @@ def _remove_lanzones_from_ether_lan(config, iResult):
         assert (lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER)
         assert (_lanzone_id in permanent_lanzone_set)
     deleted_path=list()
-    print('step0',permanent_lanzone_set)
     #remove those lanzones that are supposed to be trimmed
     #before removing the redundant backbone lanzones, remove those lanzones in iResult.initial_lanzones
     for _lanzone_id in iResult['initial_lanzones']:
@@ -513,7 +512,6 @@ def _remove_lanzones_from_ether_lan(config, iResult):
             assert (lanzone0_id == _lanzone_id)
             deleted_path.append([iface0_id, iface1_id])
             del permanent_lanzone_set[lanzone0_id]
-    print('deleted_path0:',deleted_path,permanent_lanzone_set)
     #remove those unused backbone lanzones
     while True:
         should_terminate = True
@@ -526,15 +524,35 @@ def _remove_lanzones_from_ether_lan(config, iResult):
             _iface1 = interfaces[iface1_id]
             degree[_lanzone_id] = 1 if _lanzone_id not in degree else degree[_lanzone_id] + 1
             degree[_iface1.lanzone_id] = 1 if _iface1.lanzone_id not in degree else degree[_iface1.lanzone_id] +1
-        print('deleted_path1:',deleted_path,permanent_lanzone_set)
         for _lanzone_id in degree:
             lanzone = lanzones[_lanzone_id]
             if degree[_lanzone_id] == 1 and lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
                 _, _path = permanent_lanzone_set[_lanzone_id]
-                _iface0_id, host_id, iface1_id = _path
+                _iface0_id, host_id, _iface1_id = _path
                 #bookmark here to replace the target lanzone entry if it's the start lanzone id
-                deleted_path.append([_iface0_id, iface1_id])
-                del permanent_lanzone_set[_lanzone_id]
+                if not host_id:
+                    adjacent_lanzone_id = None
+                    for __lanzone_id in permanent_lanzone_set:
+                        __, __path = permanent_lanzone_set[__lanzone_id]
+                        __iface0_id, __host_id, __iface1_id = __path
+                        if not __host_id:
+                            continue
+                        __adjacent_lanzone0_id = interfaces[__iface0_id].lanzone_id
+                        __adjacent_lanzone1_id = interfaces[__iface1_id].lanzone_id
+                        assert (__adjacent_lanzone0_id == __lanzone_id)
+                        if __adjacent_lanzone1_id == _lanzone_id:
+                            adjacent_lanzone_id = __adjacent_lanzone0_id
+                            break
+                    assert (adjacent_lanzone_id)
+                    __, __path = permanent_lanzone_set[adjacent_lanzone_id]
+                    __iface0_id, __host_id, __iface1_id = __path
+                    deleted_path.append([__iface0_id, __iface1_id])
+                    del permanent_lanzone_set[_lanzone_id]
+                    permanent_lanzone_set[adjacent_lanzone_id] = (0, (None, None, None))
+                    start_lanzone_id = adjacent_lanzone_id
+                else:
+                    deleted_path.append([_iface0_id, _iface1_id])
+                    del permanent_lanzone_set[_lanzone_id]
                 should_terminate = False
         if should_terminate:
             break
@@ -859,7 +877,7 @@ def _synchronize_ether_topology_update(config, iResult):
             target_edge_id = None
             for _tmp_edge_id in edges:
                 __edge = edges[_tmp_edge_id]
-                if __edge.service_id == service_id:
+                if __edge.service_id != service_id:
                     continue
                 if (__edge.interface0 == _iface0_id and __edge.interface1 == _iface1_id) or \
                     (__edge.interface0 == _iface1_id and __edge.interface1 == _iface0_id):
