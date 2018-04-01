@@ -1,0 +1,24 @@
+//this vswitch_host service map to the vswitch_host at server side
+syntax = "proto3";
+
+service vswitch_host {
+
+    rpc rpc_get_vswitch_host(req_key) returns (res_vswitch_host) {}
+    rpc rpc_list_vswitch_host(stream req_key) returns (stream res_vswitch_host) {}
+}
+
+message req_key {
+    bool per_uuid = 1;
+    string host_name = 2;
+    string uuid = 3;
+}
+
+
+message res_vswitch_host {
+    string id = 1;
+    string host_status = 2;
+    string description = 3;
+    string name = 4;
+    string host_ip = 5;
+}
+
