@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
     key = vswitch_host_pb2.req_key()
     key.per_uuid = False
-    key.host_name = 'nn3'
+    key.host_name = 'n3'
     try:
         host = stub.rpc_get_vswitch_host(key)
     except grpc.RpcError as e:
@@ -33,4 +33,13 @@ if __name__ == '__main__':
         print(e.details())
     else:
         print(host)
-
+    def foo():
+        host_names = ['n1','n3']
+        for name in host_names:
+            key = vswitch_host_pb2.req_key()
+            key.per_uuid = False
+            key.host_name = name
+            yield key
+    hosts=stub.rpc_list_vswitch_host(foo())
+    for i in hosts:
+        print(i)

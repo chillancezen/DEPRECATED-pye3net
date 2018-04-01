@@ -33,7 +33,6 @@ def to_vswitch_host_pb2(host):
 
 class vswitch_host_service(vswitch_host_pb2_grpc.vswitch_hostServicer):
     def rpc_get_vswitch_host(self, request, context):
-        print(request)
         host = None
         if request.per_uuid == True:
             host = invt_get_vswitch_host(request.uuid)
@@ -49,8 +48,26 @@ class vswitch_host_service(vswitch_host_pb2_grpc.vswitch_hostServicer):
         return to_vswitch_host_pb2(host)
 
     def rpc_list_vswitch_host(self, request_iterator, context):
-        pass
-
+        print('request iterators:',request_iterator)
+        hosts = invt_list_vswitch_hosts()
+        raw_hosts = list()
+        for key in request_iterator:
+            if key.per_uuid == True:
+                raw_hosts.append(invt_get_vswitch_host(key.uuid))
+            else:
+                host = None
+                for _host_id in hosts:
+                    _host = hosts[_host_id]
+                    if _host.name == key.host_name:
+                        host = _host
+                        break
+                if not host:
+                    raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+                raw_hosts.append(host)
+        _raw_hosts = raw_hosts if len(raw_hosts) else list(hosts.values())
+        for _host in _raw_hosts:
+            print('yield:',_host)
+            yield to_vswitch_host_pb2(_host)
 
 publish_rpc_service(vswitch_host_pb2_grpc.add_vswitch_hostServicer_to_server, vswitch_host_service)
 
