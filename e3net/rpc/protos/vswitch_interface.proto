@@ -1,0 +1,24 @@
+syntax = "proto3";
+import 'common.proto';
+service vswitch_interface {
+    rpc rpc_get_vswitch_interface(req_interface_key) returns (res_vswitch_interface) {}
+    rpc rpc_list_vswitch_interfaces(stream req_interface_key) returns (stream res_vswitch_interface) {}
+}
+
+
+//uuid_type 0:interface_uuid
+//          1:host_uuid
+//          2:lanzone_uuid
+message req_interface_key {
+    int32 uuid_type = 1;
+    string uuid = 2;
+}
+
+message res_vswitch_interface {
+    string id = 1;
+    string host_id = 2;
+    string dev_address = 3;
+    string interface_status = 4;
+    string interface_type =5;
+    string lanzone_id =6;
+}

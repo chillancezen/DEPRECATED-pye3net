@@ -47,7 +47,7 @@ class vswitch_host_service(vswitch_host_pb2_grpc.vswitch_hostServicer):
                 raise e3_exception(E3_EXCEPTION_NOT_FOUND)
         return to_vswitch_host_pb2(host)
 
-    def rpc_list_vswitch_host(self, request_iterator, context):
+    def rpc_list_vswitch_hosts(self, request_iterator, context):
         hosts = invt_list_vswitch_hosts()
         raw_hosts = list()
         for key in request_iterator:

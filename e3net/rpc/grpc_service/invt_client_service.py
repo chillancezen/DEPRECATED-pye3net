@@ -3,4 +3,4 @@
 #
 #enumerate all the services here
 import e3net.rpc.grpc_service.vswitch_host_client
-
+import e3net.rpc.grpc_service.vswitch_interface_client
