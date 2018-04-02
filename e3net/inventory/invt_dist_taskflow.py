@@ -28,6 +28,7 @@ E3TASKFLOW_SCHEDULE_STATUS_SUCCESSFUL = 'successful'
 E3TASKFLOW_SCHEDULE_STATUS_FAILED = 'failed'
 e3_taskflow_nr_worker = 4
 
+e3loger = get_e3loger('e3vswitch_controller')
 
 def _taskflow_backend_init():
     global _taskflow_backend
@@ -41,6 +42,7 @@ def _taskflow_backend_init():
 def _taskflow_base_worker_init():
     for i in range(e3_taskflow_nr_worker):
         t = threading.Thread(target=taskflow_base_worker, args=[i])
+        e3loger.info('instantiate taskflow thread:%s ' % (t))        
         t.start()
 
 
@@ -207,7 +209,7 @@ def invt_unset_taskflow(logbook_id):
 def taskflow_init():
     _taskflow_backend_init()
     _taskflow_base_worker_init()
-
+    e3loger.info('taskflow initialization finished')
 
 class do_foo(task.Task):
     default_provides = 'meeeow'

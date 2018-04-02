@@ -48,7 +48,6 @@ class vswitch_host_service(vswitch_host_pb2_grpc.vswitch_hostServicer):
         return to_vswitch_host_pb2(host)
 
     def rpc_list_vswitch_host(self, request_iterator, context):
-        print('request iterators:',request_iterator)
         hosts = invt_list_vswitch_hosts()
         raw_hosts = list()
         for key in request_iterator:
@@ -66,8 +65,34 @@ class vswitch_host_service(vswitch_host_pb2_grpc.vswitch_hostServicer):
                 raw_hosts.append(host)
         _raw_hosts = raw_hosts if len(raw_hosts) else list(hosts.values())
         for _host in _raw_hosts:
-            print('yield:',_host)
             yield to_vswitch_host_pb2(_host)
+    def rpc_register_vswiitch_host(self, request, context):
+        create_spec = dict()
+        create_spec['name'] = request.name
+        create_spec['host_ip'] = request.host_ip
+        create_spec['description'] = request.description
+        if request.host_status != '':
+            create_spec['host_status'] = request.host_status
+        host = invt_register_vswitch_host(create_spec, user_sync = True)
+        return to_vswitch_host_pb2(host)
+
+    def rpc_unregister_vswitch_host(self, request, context):
+        invt_unregister_vswitch_host(request.uuid, user_sync = True)
+        return vswitch_host_pb2.null()
+
+    def rpc_update_vswitch_host(self, request, context):
+        uuid = request.id
+        change_spec = dict()
+        if request.host_status != '':
+            change_spec['host_status'] = request.host_status
+        if request.description != '':
+            change_spec['description'] = request.description
+        if request.name != '':
+            change_spec['name'] = request.name
+        if request.host_ip != '':
+            change_spec['host_ip'] = request.host_ip
+        invt_update_vswitch_host(uuid, change_spec, user_sync = True)
+        return vswitch_host_pb2.null()
 
 publish_rpc_service(vswitch_host_pb2_grpc.add_vswitch_hostServicer_to_server, vswitch_host_service)
 

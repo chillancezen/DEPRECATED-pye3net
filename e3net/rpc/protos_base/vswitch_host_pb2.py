@@ -19,10 +19,34 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='vswitch_host.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\x12vswitch_host.proto\"<\n\x07req_key\x12\x10\n\x08per_uuid\x18\x01 \x01(\x08\x12\x11\n\thost_name\x18\x02 \x01(\t\x12\x0c\n\x04uuid\x18\x03 \x01(\t\"g\n\x10res_vswitch_host\x12\n\n\x02id\x18\x01 \x01(\t\x12\x13\n\x0bhost_status\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x0f\n\x07host_ip\x18\x05 \x01(\t2\x81\x01\n\x0cvswitch_host\x12\x35\n\x14rpc_get_vswitch_host\x12\x08.req_key\x1a\x11.res_vswitch_host\"\x00\x12:\n\x15rpc_list_vswitch_host\x12\x08.req_key\x1a\x11.res_vswitch_host\"\x00(\x01\x30\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x12vswitch_host.proto\"\x06\n\x04null\"<\n\x07req_key\x12\x10\n\x08per_uuid\x18\x01 \x01(\x08\x12\x11\n\thost_name\x18\x02 \x01(\t\x12\x0c\n\x04uuid\x18\x03 \x01(\t\"g\n\x10res_vswitch_host\x12\n\n\x02id\x18\x01 \x01(\t\x12\x13\n\x0bhost_status\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65scription\x18\x03 \x01(\t\x12\x0c\n\x04name\x18\x04 \x01(\t\x12\x0f\n\x07host_ip\x18\x05 \x01(\t2\xb0\x02\n\x0cvswitch_host\x12\x35\n\x14rpc_get_vswitch_host\x12\x08.req_key\x1a\x11.res_vswitch_host\"\x00\x12:\n\x15rpc_list_vswitch_host\x12\x08.req_key\x1a\x11.res_vswitch_host\"\x00(\x01\x30\x01\x12\x44\n\x1arpc_register_vswiitch_host\x12\x11.res_vswitch_host\x1a\x11.res_vswitch_host\"\x00\x12\x30\n\x1brpc_unregister_vswitch_host\x12\x08.req_key\x1a\x05.null\"\x00\x12\x35\n\x17rpc_update_vswitch_host\x12\x11.res_vswitch_host\x1a\x05.null\"\x00\x62\x06proto3')
 )
 
 
+
+
+_NULL = _descriptor.Descriptor(
+  name='null',
+  full_name='null',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=22,
+  serialized_end=28,
+)
 
 
 _REQ_KEY = _descriptor.Descriptor(
@@ -65,8 +89,8 @@ _REQ_KEY = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=22,
-  serialized_end=82,
+  serialized_start=30,
+  serialized_end=90,
 )
 
 
@@ -124,13 +148,21 @@ _RES_VSWITCH_HOST = _descriptor.Descriptor(
   extension_ranges=[],
   oneofs=[
   ],
-  serialized_start=84,
-  serialized_end=187,
+  serialized_start=92,
+  serialized_end=195,
 )
 
+DESCRIPTOR.message_types_by_name['null'] = _NULL
 DESCRIPTOR.message_types_by_name['req_key'] = _REQ_KEY
 DESCRIPTOR.message_types_by_name['res_vswitch_host'] = _RES_VSWITCH_HOST
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
+
+null = _reflection.GeneratedProtocolMessageType('null', (_message.Message,), dict(
+  DESCRIPTOR = _NULL,
+  __module__ = 'vswitch_host_pb2'
+  # @@protoc_insertion_point(class_scope:null)
+  ))
+_sym_db.RegisterMessage(null)
 
 req_key = _reflection.GeneratedProtocolMessageType('req_key', (_message.Message,), dict(
   DESCRIPTOR = _REQ_KEY,
@@ -154,8 +186,8 @@ _VSWITCH_HOST = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=190,
-  serialized_end=319,
+  serialized_start=198,
+  serialized_end=502,
   methods=[
   _descriptor.MethodDescriptor(
     name='rpc_get_vswitch_host',
@@ -173,6 +205,33 @@ _VSWITCH_HOST = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_REQ_KEY,
     output_type=_RES_VSWITCH_HOST,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='rpc_register_vswiitch_host',
+    full_name='vswitch_host.rpc_register_vswiitch_host',
+    index=2,
+    containing_service=None,
+    input_type=_RES_VSWITCH_HOST,
+    output_type=_RES_VSWITCH_HOST,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='rpc_unregister_vswitch_host',
+    full_name='vswitch_host.rpc_unregister_vswitch_host',
+    index=3,
+    containing_service=None,
+    input_type=_REQ_KEY,
+    output_type=_NULL,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='rpc_update_vswitch_host',
+    full_name='vswitch_host.rpc_update_vswitch_host',
+    index=4,
+    containing_service=None,
+    input_type=_RES_VSWITCH_HOST,
+    output_type=_NULL,
     options=None,
   ),
 ])

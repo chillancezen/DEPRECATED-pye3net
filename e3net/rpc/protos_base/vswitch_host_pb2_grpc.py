@@ -24,6 +24,21 @@ class vswitch_hostStub(object):
         request_serializer=vswitch__host__pb2.req_key.SerializeToString,
         response_deserializer=vswitch__host__pb2.res_vswitch_host.FromString,
         )
+    self.rpc_register_vswiitch_host = channel.unary_unary(
+        '/vswitch_host/rpc_register_vswiitch_host',
+        request_serializer=vswitch__host__pb2.res_vswitch_host.SerializeToString,
+        response_deserializer=vswitch__host__pb2.res_vswitch_host.FromString,
+        )
+    self.rpc_unregister_vswitch_host = channel.unary_unary(
+        '/vswitch_host/rpc_unregister_vswitch_host',
+        request_serializer=vswitch__host__pb2.req_key.SerializeToString,
+        response_deserializer=vswitch__host__pb2.null.FromString,
+        )
+    self.rpc_update_vswitch_host = channel.unary_unary(
+        '/vswitch_host/rpc_update_vswitch_host',
+        request_serializer=vswitch__host__pb2.res_vswitch_host.SerializeToString,
+        response_deserializer=vswitch__host__pb2.null.FromString,
+        )
 
 
 class vswitch_hostServicer(object):
@@ -44,6 +59,27 @@ class vswitch_hostServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def rpc_register_vswiitch_host(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def rpc_unregister_vswitch_host(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
+  def rpc_update_vswitch_host(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
 
 def add_vswitch_hostServicer_to_server(servicer, server):
   rpc_method_handlers = {
@@ -56,6 +92,21 @@ def add_vswitch_hostServicer_to_server(servicer, server):
           servicer.rpc_list_vswitch_host,
           request_deserializer=vswitch__host__pb2.req_key.FromString,
           response_serializer=vswitch__host__pb2.res_vswitch_host.SerializeToString,
+      ),
+      'rpc_register_vswiitch_host': grpc.unary_unary_rpc_method_handler(
+          servicer.rpc_register_vswiitch_host,
+          request_deserializer=vswitch__host__pb2.res_vswitch_host.FromString,
+          response_serializer=vswitch__host__pb2.res_vswitch_host.SerializeToString,
+      ),
+      'rpc_unregister_vswitch_host': grpc.unary_unary_rpc_method_handler(
+          servicer.rpc_unregister_vswitch_host,
+          request_deserializer=vswitch__host__pb2.req_key.FromString,
+          response_serializer=vswitch__host__pb2.null.SerializeToString,
+      ),
+      'rpc_update_vswitch_host': grpc.unary_unary_rpc_method_handler(
+          servicer.rpc_update_vswitch_host,
+          request_deserializer=vswitch__host__pb2.res_vswitch_host.FromString,
+          response_serializer=vswitch__host__pb2.null.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

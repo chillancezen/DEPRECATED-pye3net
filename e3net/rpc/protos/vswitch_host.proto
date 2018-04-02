@@ -2,9 +2,14 @@
 syntax = "proto3";
 
 service vswitch_host {
-
     rpc rpc_get_vswitch_host(req_key) returns (res_vswitch_host) {}
     rpc rpc_list_vswitch_host(stream req_key) returns (stream res_vswitch_host) {}
+    rpc rpc_register_vswiitch_host(res_vswitch_host) returns (res_vswitch_host) {}
+    rpc rpc_unregister_vswitch_host(req_key) returns (null) {}
+    rpc rpc_update_vswitch_host(res_vswitch_host) returns(null) {}
+}
+
+message null {
 }
 
 message req_key {
