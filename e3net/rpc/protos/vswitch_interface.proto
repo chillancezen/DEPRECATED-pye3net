@@ -3,6 +3,9 @@ import 'common.proto';
 service vswitch_interface {
     rpc rpc_get_vswitch_interface(req_interface_key) returns (res_vswitch_interface) {}
     rpc rpc_list_vswitch_interfaces(stream req_interface_key) returns (stream res_vswitch_interface) {}
+    rpc rpc_update_vswitch_interface(res_vswitch_interface) returns (null) {}
+    rpc rpc_register_vswitch_interface(res_vswitch_interface) returns (res_vswitch_interface) {}
+    rpc rpc_unregister_vswitch_interface(req_interface_key) returns(null) {}
 }
 
 

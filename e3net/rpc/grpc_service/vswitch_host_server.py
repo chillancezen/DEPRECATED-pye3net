@@ -10,6 +10,7 @@ from e3net.inventory.invt_vswitch_host import invt_update_vswitch_host
 from e3net.inventory.invt_vswitch_host import invt_unregister_vswitch_host
 from e3net.inventory.invt_vswitch_host import invt_get_vswitch_host
 from e3net.inventory.invt_vswitch_host import invt_list_vswitch_hosts
+from e3net.rpc.protos_base import common_pb2
 from e3net.rpc.protos_base import vswitch_host_pb2
 from e3net.rpc.protos_base import vswitch_host_pb2_grpc
 from e3net.common.e3exception import e3_exception
@@ -78,7 +79,7 @@ class vswitch_host_service(vswitch_host_pb2_grpc.vswitch_hostServicer):
 
     def rpc_unregister_vswitch_host(self, request, context):
         invt_unregister_vswitch_host(request.uuid, user_sync = True)
-        return vswitch_host_pb2.null()
+        return common_pb2.null()
 
     def rpc_update_vswitch_host(self, request, context):
         uuid = request.id
@@ -92,7 +93,7 @@ class vswitch_host_service(vswitch_host_pb2_grpc.vswitch_hostServicer):
         if request.host_ip != '':
             change_spec['host_ip'] = request.host_ip
         invt_update_vswitch_host(uuid, change_spec, user_sync = True)
-        return vswitch_host_pb2.null()
+        return common_pb2.null()
 
 publish_rpc_service(vswitch_host_pb2_grpc.add_vswitch_hostServicer_to_server, vswitch_host_service)
 

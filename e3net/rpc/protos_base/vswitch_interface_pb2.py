@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='vswitch_interface.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\x17vswitch_interface.proto\x1a\x0c\x63ommon.proto\"4\n\x11req_interface_key\x12\x11\n\tuuid_type\x18\x01 \x01(\x05\x12\x0c\n\x04uuid\x18\x02 \x01(\t\"\x8f\x01\n\x15res_vswitch_interface\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0f\n\x07host_id\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65v_address\x18\x03 \x01(\t\x12\x18\n\x10interface_status\x18\x04 \x01(\t\x12\x16\n\x0einterface_type\x18\x05 \x01(\t\x12\x12\n\nlanzone_id\x18\x06 \x01(\t2\xaf\x01\n\x11vswitch_interface\x12I\n\x19rpc_get_vswitch_interface\x12\x12.req_interface_key\x1a\x16.res_vswitch_interface\"\x00\x12O\n\x1brpc_list_vswitch_interfaces\x12\x12.req_interface_key\x1a\x16.res_vswitch_interface\"\x00(\x01\x30\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x17vswitch_interface.proto\x1a\x0c\x63ommon.proto\"4\n\x11req_interface_key\x12\x11\n\tuuid_type\x18\x01 \x01(\x05\x12\x0c\n\x04uuid\x18\x02 \x01(\t\"\x8f\x01\n\x15res_vswitch_interface\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0f\n\x07host_id\x18\x02 \x01(\t\x12\x13\n\x0b\x64\x65v_address\x18\x03 \x01(\t\x12\x18\n\x10interface_status\x18\x04 \x01(\t\x12\x16\n\x0einterface_type\x18\x05 \x01(\t\x12\x12\n\nlanzone_id\x18\x06 \x01(\t2\x85\x03\n\x11vswitch_interface\x12I\n\x19rpc_get_vswitch_interface\x12\x12.req_interface_key\x1a\x16.res_vswitch_interface\"\x00\x12O\n\x1brpc_list_vswitch_interfaces\x12\x12.req_interface_key\x1a\x16.res_vswitch_interface\"\x00(\x01\x30\x01\x12?\n\x1crpc_update_vswitch_interface\x12\x16.res_vswitch_interface\x1a\x05.null\"\x00\x12R\n\x1erpc_register_vswitch_interface\x12\x16.res_vswitch_interface\x1a\x16.res_vswitch_interface\"\x00\x12?\n rpc_unregister_vswitch_interface\x12\x12.req_interface_key\x1a\x05.null\"\x00\x62\x06proto3')
   ,
   dependencies=[common__pb2.DESCRIPTOR,])
 
@@ -157,7 +157,7 @@ _VSWITCH_INTERFACE = _descriptor.ServiceDescriptor(
   index=0,
   options=None,
   serialized_start=242,
-  serialized_end=417,
+  serialized_end=631,
   methods=[
   _descriptor.MethodDescriptor(
     name='rpc_get_vswitch_interface',
@@ -175,6 +175,33 @@ _VSWITCH_INTERFACE = _descriptor.ServiceDescriptor(
     containing_service=None,
     input_type=_REQ_INTERFACE_KEY,
     output_type=_RES_VSWITCH_INTERFACE,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='rpc_update_vswitch_interface',
+    full_name='vswitch_interface.rpc_update_vswitch_interface',
+    index=2,
+    containing_service=None,
+    input_type=_RES_VSWITCH_INTERFACE,
+    output_type=common__pb2._NULL,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='rpc_register_vswitch_interface',
+    full_name='vswitch_interface.rpc_register_vswitch_interface',
+    index=3,
+    containing_service=None,
+    input_type=_RES_VSWITCH_INTERFACE,
+    output_type=_RES_VSWITCH_INTERFACE,
+    options=None,
+  ),
+  _descriptor.MethodDescriptor(
+    name='rpc_unregister_vswitch_interface',
+    full_name='vswitch_interface.rpc_unregister_vswitch_interface',
+    index=4,
+    containing_service=None,
+    input_type=_REQ_INTERFACE_KEY,
+    output_type=common__pb2._NULL,
     options=None,
   ),
 ])
