@@ -61,6 +61,26 @@ def rpc_client_register_vswitch_interface(stub,
         iface_pb2.interface_type = interface_type
     return stub.rpc_register_vswitch_interface(iface_pb2)
 
+def rpc_client_unregister_vswitch_interface(stub, uuid):
+    key = vswitch_interface_pb2.req_interface_key()
+    key.uuid = uuid
+    stub.rpc_unregister_vswitch_interface(key)
+
+def rpc_client_update_vswitch_interface(stub,
+                                        uuid,
+                                        interface_status = None,
+                                        interface_type = None,
+                                        lanzone_id = None):
+    iface_pb2 = vswitch_interface_pb2.res_vswitch_interface()
+    iface_pb2.id = uuid
+    if interface_status:
+        iface_pb2.interface_status = interface_status
+    if interface_type:
+        iface_pb2.interface_type = interface_type
+    if lanzone_id:
+        iface_pb2.lanzone_id = lanzone_id
+    stub.rpc_update_vswitch_interface(iface_pb2)
+
 if __name__ == '__main__':
     import grpc
     import sys
@@ -76,7 +96,10 @@ if __name__ == '__main__':
     ifaces = rpc_client_list_vswitch_interfaces_for_lanzone(stub,['763cfbf2-f014-479e-a522-5ceb9926de4f'])
     for iface in ifaces:
         print(iface)
-    print(rpc_client_register_vswitch_interface(stub, 'a8c07386-d5d1-43cc-bcd1-06e2a37c225e', '00.0.0', '4e8d1fca-6398-416a-aa78-2e0d50270338'))
+    iface = rpc_client_register_vswitch_interface(stub, 'a8c07386-d5d1-43cc-bcd1-06e2a37c225e', '00.0.2', '4e8d1fca-6398-416a-aa78-2e0d50270338')
+    rpc_client_update_vswitch_interface(stub,iface.id, interface_type = 'exclusive')
+    print(rpc_client_get_vswitch_interface(stub, iface.id))
+    rpc_client_unregister_vswitch_interface(stub,iface.id)
     sys.exit()
     key = vswitch_interface_pb2.req_interface_key()
     key.uuid = 'aef0a53a-b90c-4a51-afa9-ee3b3db77a6b'
