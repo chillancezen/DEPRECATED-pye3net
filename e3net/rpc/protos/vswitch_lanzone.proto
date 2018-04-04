@@ -1,0 +1,25 @@
+syntax = "proto3";
+import 'common.proto';
+
+service vswitch_lanzone {
+    rpc rpc_get_vswitch_lanzone(req_lanzone_key) returns (res_vswitch_lanzone) {}
+    rpc rpc_list_vswitch_lanzones(stream req_lanzone_key) returns (stream res_vswitch_lanzone) {}
+    rpc rpc_register_vswitch_lanzone(res_vswitch_lanzone) returns (res_vswitch_lanzone) {}
+    rpc rpc_unregister_vswitch_lanzone(req_lanzone_key) returns (null) {}
+    rpc rpc_update_vswitch_lanzone(res_vswitch_lanzone) returns (null) {}
+}
+
+message req_lanzone_key {
+    bool per_uuid = 1;
+    string uuid = 2;
+    string lanzone_name = 3 ;
+}
+
+
+message res_vswitch_lanzone {
+    string id = 1;
+    string name = 2;
+    string zone_type = 3;
+    int32 min_vlan = 4;
+    int32 max_vlan = 5;
+}
