@@ -19,15 +19,14 @@ from e3net.common.e3log import get_e3loger
 import traceback
 from e3net.common.e3keeper import root_keeper
 from e3net.db.db_base import register_database_load_entrance
+from e3net.common.e3def import E3VSWITCH_HOST_STATUS_UNKNOWN
+from e3net.common.e3def import E3VSWITCH_HOST_STATUS_ACTIVE
+from e3net.common.e3def import E3VSWITCH_HOST_STATUS_INACTIVE
+from e3net.common.e3def import E3VSWITCH_HOST_STATUS_MAINTENANCE
 
 e3loger = get_e3loger('e3vswitch_controller')
 
 DB_NAME = 'E3NET_VSWITCH'
-E3VSWITCH_HOST_STATUS_UNKNOWN = 'unknown'
-E3VSWITCH_HOST_STATUS_ACTIVE = 'active'
-E3VSWITCH_HOST_STATUS_INACTIVE = 'inactive'
-E3VSWITCH_HOST_STATUS_MAINTENANCE = 'maintenance'
-
 
 class E3VswitchHost(DB_BASE):
     __tablename__ = 'vswitch_host'

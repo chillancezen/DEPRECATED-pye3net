@@ -8,6 +8,12 @@ from e3net.common.e3exception import E3_EXCEPTION_INVALID_ARGUMENT
 from e3net.common.e3exception import E3_EXCEPTION_OUT_OF_RESOURCE
 from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
 from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
+from e3net.common.e3def import E3VSWITCH_INTERFACE_STATUS_UNKNOWN
+from e3net.common.e3def import E3VSWITCH_INTERFACE_STATUS_ACTIVE
+from e3net.common.e3def import E3VSWITCH_INTERFACE_STATUS_INACTIVE
+from e3net.common.e3def import E3VSWITCH_INTERFACE_STATUS_MAINTENANCE
+from e3net.common.e3def import E3VSWITCH_INTERFACE_TYPE_SHARED
+from e3net.common.e3def import E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
 from e3net.db.db_base import db_sessions
 from e3net.db.db_base import DB_BASE
 from sqlalchemy import String
@@ -26,14 +32,6 @@ from e3net.db.db_base import register_database_load_entrance
 e3loger = get_e3loger('e3vswitch_controller')
 
 DB_NAME = 'E3NET_VSWITCH'
-
-E3VSWITCH_INTERFACE_STATUS_UNKNOWN = 'unknown'
-E3VSWITCH_INTERFACE_STATUS_ACTIVE = 'active'
-E3VSWITCH_INTERFACE_STATUS_INACTIVE = 'inactive'
-E3VSWITCH_INTERFACE_STATUS_MAINTENANCE = 'maintenance'
-
-E3VSWITCH_INTERFACE_TYPE_SHARED = 'shared'
-E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE = 'exclusive'
 
 
 class E3VswitchInterface(DB_BASE):
