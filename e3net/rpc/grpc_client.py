@@ -23,6 +23,7 @@ stub_inventory = dict()
 def publish_stub_inventory(rpc_service_name, stub_entry):
     stub_inventory[rpc_service_name] = stub_entry
 
+
 class grpc_channel():
     def __init__(self):
         self.channel = None

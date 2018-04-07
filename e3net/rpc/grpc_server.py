@@ -20,7 +20,10 @@ rpc_service_invt = list()
 def publish_rpc_service(func,service_class):
     rpc_service_invt.append((func, service_class))
 
+e3loger = get_e3loger('vswitch_controller')
+
 def grpc_server_init():
+    
     secure_channel = get_config(None, 'grpc', 'secure_channel')
     max_threads = get_config(None, 'grpc', 'max_threads')
     grpc_port = get_config(None, 'grpc', 'grpc_port')
