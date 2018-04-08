@@ -48,6 +48,7 @@ class interface_config():
         self.role = None
         self.hw_model = None
         self.lanzone = None
+        self.iface_type = None
         self.vswitch_interface = None
     def __str__(self):
         return str(self.__dict__)
@@ -108,7 +109,10 @@ def e3neta_config_init():
         model = get_config(None, 'vswitch_interface', '%s.hw_model' % (_iface))
         model = model.strip()
         host_agent.interfaces[_iface].hw_model = port_model_mapping[model]
-        host_agent.lanzone = get_config(None, 'vswitch_interface', '%s.lanzone' % (_iface))
+        host_agent.interfaces[_iface].lanzone = get_config(None, 'vswitch_interface', '%s.lanzone' % (_iface))
+        host_agent.interfaces[_iface].iface_type = get_config(None, 'vswitch_interface', '%s.type' % (_iface))
+        assert (host_agent.interfaces[_iface].iface_type in [E3VSWITCH_INTERFACE_TYPE_SHARED,
+                                            E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE])
     #optional options are loaded below
     try:
         host_agent.description = get_config(None, 'vswitch_host', 'description')

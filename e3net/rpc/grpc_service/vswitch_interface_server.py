@@ -70,7 +70,7 @@ class vswitch_interface_service(vswitch_interface_pb2_grpc.vswitch_interfaceServ
         if request.interface_type != '':
             create_spec['interface_type'] = request.interface_type
         if request.interface_status != '':
-            create_spec['interface_status'] != request.interface_status
+            create_spec['interface_status'] = request.interface_status
         iface = invt_register_vswitch_interface(create_spec, user_sync = True)
         return to_vswitch_interface_pb2(iface)
 
