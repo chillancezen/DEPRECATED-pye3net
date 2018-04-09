@@ -1,0 +1,29 @@
+syntax = "proto3";
+import 'common.proto';
+
+service ether_service {
+    rpc rpc_get_ether_service(req_ether_service_key) returns (res_ether_service) {}
+    rpc rpc_list_ether_services(stream req_ether_service_key) returns (stream res_ether_service) {}
+    rpc rpc_register_ether_service(res_ether_service) returns (res_ether_service) {}
+    rpc rpc_unregister_ether_service(req_ether_service_key) returns (null) {}
+
+    //rpc for e3neta&e3netd interaction
+    rpc rpc_push_ether_service(stream res_ether_service) returns (null) {}
+    rpc rpc_pull_ether_services(req_ether_service_key) returns(stream res_ether_service) {}
+}
+
+message req_ether_service_key {
+    bool per_tenant = 1;
+    //when per_tenant is True, tenant_id_or_uuid represents a tenant ID,
+    //otherwise tenant_id_or_uuid is the uuid of ether_service or a host UUID
+    string tenant_id_or_uuid = 2;
+}
+
+message res_ether_service {
+    string id = 1;
+    string name = 2;
+    string service_type = 3;
+    string tenant_id = 4;
+    string created_at = 5;
+    string link_type =6;
+}
