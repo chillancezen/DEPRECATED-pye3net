@@ -11,7 +11,10 @@ from e3net.common.e3exception import E3_EXCEPTION_NOT_SUPPORT
 from e3net.common.e3exception import E3_EXCEPTION_BE_PRESENT
 from e3net.db.db_base import db_sessions
 from e3net.db.db_base import DB_BASE
-
+from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LINE
+from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LAN
+from e3net.common.e3def import E3NET_ETHER_SERVICE_LINK_SHARED
+from e3net.common.e3def import E3NET_ETHER_SERVICE_LINK_EXCLUSIVE
 from sqlalchemy import String
 from sqlalchemy import Text
 from sqlalchemy import Column
@@ -30,12 +33,6 @@ from e3net.db.db_base import register_database_load_entrance
 e3loger = get_e3loger('e3vswitch_controller')
 
 DB_NAME = 'E3NET_VSWITCH'
-
-E3NET_ETHER_SERVICE_TYPE_LINE = 'e-line'
-E3NET_ETHER_SERVICE_TYPE_LAN = 'e-lan'
-
-E3NET_ETHER_SERVICE_LINK_SHARED = 'shared'
-E3NET_ETHER_SERVICE_LINK_EXCLUSIVE = 'exclusive'
 
 
 class E3EtherService(DB_BASE):
