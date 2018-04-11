@@ -1,4 +1,4 @@
-#invt_list_vswitch_interfaces
+#
 #Copyright (c) 2018 Jie Zheng
 #
 import sys

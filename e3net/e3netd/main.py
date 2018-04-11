@@ -8,7 +8,7 @@ from e3net.db.db_base import load_database
 from e3net.inventory.invt_base import e3inventory_base_init
 from e3net.inventory.invt_dist_taskflow import taskflow_init
 from e3net.rpc.grpc_server import grpc_server_init
-from e3net.rpc.grpc_service import invt_server_service
+from e3net.rpc.grpc_service import invt_e3netd_services
 from e3net.inventory.invt_event_notifier import event_init
 
 def main():

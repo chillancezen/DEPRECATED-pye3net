@@ -21,6 +21,7 @@ channel_lock = e3rwlock()
 
 stub_inventory = dict()
 def publish_stub_inventory(rpc_service_name, stub_entry):
+    print('adding rpc stub: %s' % (stub_entry))
     stub_inventory[rpc_service_name] = stub_entry
 
 

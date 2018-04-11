@@ -35,8 +35,8 @@ class ether_serviceStub(object):
         request_serializer=ether__service__pb2.req_ether_service_key.SerializeToString,
         response_deserializer=common__pb2.null.FromString,
         )
-    self.rpc_push_ether_service = channel.stream_unary(
-        '/ether_service/rpc_push_ether_service',
+    self.rpc_push_ether_services = channel.stream_unary(
+        '/ether_service/rpc_push_ether_services',
         request_serializer=ether__service__pb2.res_ether_service.SerializeToString,
         response_deserializer=common__pb2.null.FromString,
         )
@@ -79,7 +79,7 @@ class ether_serviceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
-  def rpc_push_ether_service(self, request_iterator, context):
+  def rpc_push_ether_services(self, request_iterator, context):
     """rpc for e3neta&e3netd interaction
     """
     context.set_code(grpc.StatusCode.UNIMPLEMENTED)
@@ -116,8 +116,8 @@ def add_ether_serviceServicer_to_server(servicer, server):
           request_deserializer=ether__service__pb2.req_ether_service_key.FromString,
           response_serializer=common__pb2.null.SerializeToString,
       ),
-      'rpc_push_ether_service': grpc.stream_unary_rpc_method_handler(
-          servicer.rpc_push_ether_service,
+      'rpc_push_ether_services': grpc.stream_unary_rpc_method_handler(
+          servicer.rpc_push_ether_services,
           request_deserializer=ether__service__pb2.res_ether_service.FromString,
           response_serializer=common__pb2.null.SerializeToString,
       ),

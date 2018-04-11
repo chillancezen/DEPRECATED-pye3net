@@ -8,7 +8,7 @@ service ether_service {
     rpc rpc_unregister_ether_service(req_ether_service_key) returns (null) {}
 
     //rpc for e3neta&e3netd interaction
-    rpc rpc_push_ether_service(stream res_ether_service) returns (null) {}
+    rpc rpc_push_ether_services(stream res_ether_service) returns (null) {}
     rpc rpc_pull_ether_services(req_ether_service_key) returns(stream res_ether_service) {}
 }
 

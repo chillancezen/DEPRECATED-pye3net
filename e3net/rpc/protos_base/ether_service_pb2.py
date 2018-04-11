@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='ether_service.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\x13\x65ther_service.proto\x1a\x0c\x63ommon.proto\"F\n\x15req_ether_service_key\x12\x12\n\nper_tenant\x18\x01 \x01(\x08\x12\x19\n\x11tenant_id_or_uuid\x18\x02 \x01(\t\"}\n\x11res_ether_service\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x14\n\x0cservice_type\x18\x03 \x01(\t\x12\x11\n\ttenant_id\x18\x04 \x01(\t\x12\x12\n\ncreated_at\x18\x05 \x01(\t\x12\x11\n\tlink_type\x18\x06 \x01(\t2\xb0\x03\n\rether_service\x12\x45\n\x15rpc_get_ether_service\x12\x16.req_ether_service_key\x1a\x12.res_ether_service\"\x00\x12K\n\x17rpc_list_ether_services\x12\x16.req_ether_service_key\x1a\x12.res_ether_service\"\x00(\x01\x30\x01\x12\x46\n\x1arpc_register_ether_service\x12\x12.res_ether_service\x1a\x12.res_ether_service\"\x00\x12?\n\x1crpc_unregister_ether_service\x12\x16.req_ether_service_key\x1a\x05.null\"\x00\x12\x37\n\x16rpc_push_ether_service\x12\x12.res_ether_service\x1a\x05.null\"\x00(\x01\x12I\n\x17rpc_pull_ether_services\x12\x16.req_ether_service_key\x1a\x12.res_ether_service\"\x00\x30\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x13\x65ther_service.proto\x1a\x0c\x63ommon.proto\"F\n\x15req_ether_service_key\x12\x12\n\nper_tenant\x18\x01 \x01(\x08\x12\x19\n\x11tenant_id_or_uuid\x18\x02 \x01(\t\"}\n\x11res_ether_service\x12\n\n\x02id\x18\x01 \x01(\t\x12\x0c\n\x04name\x18\x02 \x01(\t\x12\x14\n\x0cservice_type\x18\x03 \x01(\t\x12\x11\n\ttenant_id\x18\x04 \x01(\t\x12\x12\n\ncreated_at\x18\x05 \x01(\t\x12\x11\n\tlink_type\x18\x06 \x01(\t2\xb1\x03\n\rether_service\x12\x45\n\x15rpc_get_ether_service\x12\x16.req_ether_service_key\x1a\x12.res_ether_service\"\x00\x12K\n\x17rpc_list_ether_services\x12\x16.req_ether_service_key\x1a\x12.res_ether_service\"\x00(\x01\x30\x01\x12\x46\n\x1arpc_register_ether_service\x12\x12.res_ether_service\x1a\x12.res_ether_service\"\x00\x12?\n\x1crpc_unregister_ether_service\x12\x16.req_ether_service_key\x1a\x05.null\"\x00\x12\x38\n\x17rpc_push_ether_services\x12\x12.res_ether_service\x1a\x05.null\"\x00(\x01\x12I\n\x17rpc_pull_ether_services\x12\x16.req_ether_service_key\x1a\x12.res_ether_service\"\x00\x30\x01\x62\x06proto3')
   ,
   dependencies=[common__pb2.DESCRIPTOR,])
 
@@ -157,7 +157,7 @@ _ETHER_SERVICE = _descriptor.ServiceDescriptor(
   index=0,
   options=None,
   serialized_start=237,
-  serialized_end=669,
+  serialized_end=670,
   methods=[
   _descriptor.MethodDescriptor(
     name='rpc_get_ether_service',
@@ -196,8 +196,8 @@ _ETHER_SERVICE = _descriptor.ServiceDescriptor(
     options=None,
   ),
   _descriptor.MethodDescriptor(
-    name='rpc_push_ether_service',
-    full_name='ether_service.rpc_push_ether_service',
+    name='rpc_push_ether_services',
+    full_name='ether_service.rpc_push_ether_services',
     index=4,
     containing_service=None,
     input_type=_RES_ETHER_SERVICE,
