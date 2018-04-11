@@ -1,0 +1,25 @@
+syntax = "proto3";
+import 'common.proto';
+
+service topology_edge {
+    rpc rpc_get_topology_edge(req_edge_key) returns (res_topology_edge) {}
+    rpc rpc_list_topology_edges(stream req_edge_key) returns (stream res_topology_edge) {}
+
+    //reserved rpc function, we define it, but do not implement them
+    //in case we draw the topologies mannually
+    rpc rpc_regsiter_topology_edge(res_topology_edge) returns (res_topology_edge) {}
+    rpc rpc_unregister_topology_edge(req_edge_key) returns (null) {}
+}
+
+message req_edge_key {
+    bool per_uuid = 1;
+    string uuid_or_service_id = 2;
+}
+
+message res_topology_edge {
+    string id = 1;
+    string interface0 = 2;
+    string interface1 = 3;
+    string service_id = 4;
+}
+
