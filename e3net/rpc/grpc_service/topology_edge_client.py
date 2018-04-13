@@ -47,6 +47,6 @@ if __name__ == '__main__':
     print(rpc_client_get_topology_edge(stub, '4ba573ea-84eb-4ed6-8be9-f3831f9e72ee'))
     edges = rpc_client_list_topology_edges(stub,['53183c64-fb52-4593-8ea2-ed1bdf668548',
         '82d688e1-44d1-4ae4-9ddb-3eda02a6c794'])
-    edges = rpc_client_list_topology_edges_for_services(stub,['add0e8b7-95db-4033-8aae-207576d9d019'])
+    edges = rpc_client_list_topology_edges_for_services(stub,['57966a9d-a07d-462f-9555-19091b2d74a9'])
     for edge in edges:
         print(edge)

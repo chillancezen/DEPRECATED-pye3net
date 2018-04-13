@@ -1,0 +1,15 @@
+syntax = "proto3";
+import 'common.proto';
+
+service label_distribution {
+    rpc rpc_deposit_labels(stream label) returns (null) {}
+    rpc rpc_withdraw_labels(stream label) returns (null) {}
+    rpc rpc_pull_labels(stream label) returns (stream label) {}
+}
+
+message label {
+    int32 label_id = 1;
+    bool is_unicast = 2;
+    string service_id = 3;
+    string lanzone_id = 4;
+}
