@@ -5,9 +5,6 @@ from sqlalchemy import *
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
-from e3net.common.e3log import get_e3loger
-
-e3loger = get_e3loger('e3vswitch_controller')
 
 db_bases = dict()
 db_sessions = dict()
@@ -33,7 +30,6 @@ def init_database(db_name, conn, echo=False):
 
 def load_database():
     for item in load_factory:
-        e3loger.info('loading database for: %s' % (item))
         load_factory[item]()
 
 
