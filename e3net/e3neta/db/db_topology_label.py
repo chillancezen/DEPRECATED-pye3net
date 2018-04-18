@@ -58,20 +58,43 @@ class topology_label(DB_BASE):
         l.is_unicast = self.is_unicast
         return l
 
+topology_label_guard = e3rwlock()
 #calculate the label_id for the nexthop
 def register_topology_label(customer_lanzone,
     neighbor_id,
     direction,
-    service_id):
+    service_id,
+    is_unicast = True):
+    assert (direction in [LABEL_DIRECTION_INGRESS,
+        LABEL_DIRECTION_EGRESS])
     session = db_sessions[DB_NAME]()
     try:
+        topology_label_guard.write_lock()
         session.begin()
-        labels = session.query(topology_label).filter( \
-            topology_label.service_id == service_id).order_by( \
+        labels = session.query(topology_label).filter(and_(
+            topology_label.service_id == service_id,
+            topology_label.direction == direction)).order_by(
             topology_label.label_id).all()
+        #find the unoccupied and least label
+        label_id = 1
         for _label in labels:
             if _label.neighbor_id == neighbor_id:
                 #label entry already exist, return it immediately
                 return _label
+            if _label.label_id == label_id:
+                label_id += 1
+        #register them in database
+        l = topology_label()
+        l.id = str(uuid4())
+        l.customer_lanzone = customer_lanzone
+        l.neighbor_id = neighbor_id
+        l.label_id = label_id
+        l.direction = direction
+        l.service_id = service_id
+        l.is_unicast = is_unicast
+        session.add(l)
+        session.commit()
+        return l.clone()
     finally:
         session.close()
+        topology_label_guard.write_unlock()
