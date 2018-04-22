@@ -30,6 +30,7 @@ class topology_label(DB_BASE):
     id = Column(String(64), primary_key = True)
     customer_lanzone = Column(String(64), nullable = False)
     neighbor_id = Column(String(64), ForeignKey('topology_neighbor.id'), nullable = False)
+    interface_id = Column(String(64), nullable = False)
     label_id = Column(Integer(), nullable = False)
     direction = Column(Enum(LABEL_DIRECTION_INGRESS,
         LABEL_DIRECTION_EGRESS),nullable = False)
@@ -41,17 +42,19 @@ class topology_label(DB_BASE):
         ret['id'] = self.id
         ret['customer_lanzone'] = self.customer_lanzone
         ret['neighbor_id'] = self.neighbor_id
+        ret['interface_id'] = self.interface_id
         ret['label_id'] = self.label_id
         ret['direction'] = self.direction
         ret['service_id'] = self.service_id
         ret['is_unicast'] = self.is_unicast
         return str(ret)
 
-    def __init__(self):
+    def clone(self):
         l = topology_label()
         l.id = self.id
         l.customer_lanzone =self.customer_lanzone
         l.neighbor_id = self.neighbor_id
+        l.interface_id = self.interface_id
         l.label_id = self.label_id
         l.direction = self.direction
         l.service_id = self.service_id
@@ -60,41 +63,68 @@ class topology_label(DB_BASE):
 
 topology_label_guard = e3rwlock()
 #calculate the label_id for the nexthop
-def register_topology_label(customer_lanzone,
+def db_update_unicast_topology_label(customer_lanzone,
+    interface_id,
     neighbor_id,
     direction,
     service_id,
-    is_unicast = True):
+    allocated_label_id = None):
     assert (direction in [LABEL_DIRECTION_INGRESS,
         LABEL_DIRECTION_EGRESS])
+    assert (allocated_label_id if \
+        direction == LABEL_DIRECTION_EGRESS else True)
     session = db_sessions[DB_NAME]()
     try:
         topology_label_guard.write_lock()
         session.begin()
         labels = session.query(topology_label).filter(and_(
-            topology_label.service_id == service_id,
-            topology_label.direction == direction)).order_by(
+            topology_label.interface_id == interface_id,
+            topology_label.direction == direction,
+            topology_label.is_unicast == True)).order_by(
             topology_label.label_id).all()
-        #find the unoccupied and least label
-        label_id = 1
+        target_label = None
+        least_label_id = 1
         for _label in labels:
-            if _label.neighbor_id == neighbor_id:
-                #label entry already exist, return it immediately
-                return _label
-            if _label.label_id == label_id:
-                label_id += 1
-        #register them in database
-        l = topology_label()
-        l.id = str(uuid4())
-        l.customer_lanzone = customer_lanzone
-        l.neighbor_id = neighbor_id
-        l.label_id = label_id
-        l.direction = direction
-        l.service_id = service_id
-        l.is_unicast = is_unicast
-        session.add(l)
-        session.commit()
-        return l.clone()
+            if _label.service_id == service_id and \
+                _label.customer_lanzone == customer_lanzone:
+                target_label = _label
+                break
+            if _label.label_id == least_label_id:
+                least_label_id += 1
+        if target_label:
+            target_label.label_id = allocated_label_id if \
+                direction == LABEL_DIRECTION_EGRESS else \
+                least_label_id
+            session.commit()
+        else:
+            target_label = topology_label()
+            target_label.id =str(uuid4())
+            target_label.service_id = service_id
+            target_label.customer_lanzone = customer_lanzone
+            target_label.neighbor_id = neighbor_id
+            target_label.interface_id = interface_id
+            target_label.direction = direction
+            target_label.is_unicast = True
+            target_label.label_id = allocated_label_id if \
+                direction == LABEL_DIRECTION_EGRESS else \
+                least_label_id
+            session.add(target_label)
+            session.commit()
+        return target_label.clone()
     finally:
         session.close()
         topology_label_guard.write_unlock()
+if __name__ == '__main__':
+    from e3net.db.db_base import init_database
+    from e3net.db.db_base import create_database_entries
+    from e3net.e3neta.db.db_topology_neighbor import topology_neighbor
+    init_database('e3net_agent','sqlite:////var/run/e3net/e3neta.db',False)
+    create_database_entries('e3net_agent')
+    from e3net.e3neta.db.db_topology_neighbor import register_topology_neighbor
+    n = register_topology_neighbor('hello', 'world')
+    print(n)
+    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.0')
+    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.1')
+    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_EGRESS,'service.0', 33)
+    #l = register_topology_label('customer.lan2', n.id, LABEL_DIRECTION_INGRESS,'service.0')
+    print(l)
