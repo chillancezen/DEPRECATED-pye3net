@@ -114,6 +114,63 @@ def db_update_unicast_topology_label(customer_lanzone,
     finally:
         session.close()
         topology_label_guard.write_unlock()
+def db_get_unicast_topology_label(service_id,
+    customer_lanzone,
+    direction,
+    interface_id = None):
+    session = db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        topology_label_guard.read_lock()
+        filter_condition = None
+        if interface_id:
+            filter_condition = and_(
+                topology_label.service_id == service_id,
+                topology_label.customer_lanzone == customer_lanzone,
+                topology_label.direction == direction,
+                topology_label.interface_id == interface_id)
+        else:
+            filter_condition = and_(
+                topology_label.service_id == service_id,
+                topology_label.customer_lanzone == customer_lanzone,
+                topology_label.direction == direction)
+        labels = session.query(topology_label).filter(filter_condition).all()
+        return [l.clone() for l in labels]
+    finally:
+        topology_label_guard.read_unlock()
+        session.close()
+def db_list_unicast_topology_labels(service_id = None, direction = None):
+    session = db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        topology_label_guard.read_lock()
+        filter_condition = and_()
+        if service_id and direction:
+            filter_condition = and_(
+                topology_label.service_id == service_id,
+                topology_label.direction == direction)
+        elif service_id and not direction:
+            filter_condition = and_(topology_label.service_id == service_id)
+        elif not service_id and direction:
+            filter_condition = and_(topology_label.direction == direction)
+        labels = session.query(topology_label).filter(filter_condition).all()
+        return [l.clone() for l in labels]
+    finally:
+        topology_label_guard.read_unlock()
+        session.close()
+def db_delete_unicast_topology_label(uuid):
+    session = db_sessions[DB_NAME]()
+    try:
+        session.begin()
+        topology_label_guard.write_lock()
+        label = session.query(topology_label).filter(topology_label.id == uuid).first()
+        if not label:
+            raise e3_exception(E3_EXCEPTION_NOT_FOUND)
+        session.delete(label)
+        session.commit()
+    finally:
+        topology_label_guard.write_unlock()
+        session.close()
 if __name__ == '__main__':
     from e3net.db.db_base import init_database
     from e3net.db.db_base import create_database_entries
@@ -124,7 +181,12 @@ if __name__ == '__main__':
     n = register_topology_neighbor('hello', 'world')
     print(n)
     l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.0')
+    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id+'1', n.id, LABEL_DIRECTION_INGRESS,'service.0')
     l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.1')
     l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_EGRESS,'service.0', 33)
     #l = register_topology_label('customer.lan2', n.id, LABEL_DIRECTION_INGRESS,'service.0')
-    print(l)
+    labels = db_get_unicast_topology_label('service.0', 'customer.lan0', LABEL_DIRECTION_EGRESS, n.local_interface_id)
+    labels = db_list_unicast_topology_labels(direction = LABEL_DIRECTION_EGRESS)
+    for l in labels:
+        #db_delete_unicast_topology_label(l.id)
+        print(l)
