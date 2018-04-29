@@ -78,13 +78,24 @@ if __name__ == '__main__':
     from e3net.common.e3config import load_configs
     add_config_file('/etc/e3net/e3vswitch.ini')
     load_configs()
+    lanzones_def = {
+        'customer-lan0': 'customer',
+        'customer-lan1': 'customer',
+        'customer-lan2': 'customer',
+        'customer-lan3': 'customer',
+        'backbone-lan0': 'backbone',
+        'backbone-lan1': 'backbone',
+        'backbone-lan2': 'backbone',
+    }
     stub = get_stub('127.0.0.1', 9418, rpc_service)
+    for _name in lanzones_def:
+        lanzone = rpc_client_register_vswitch_lanzone(stub, _name, lanzones_def[_name])
     #print(rpc_client_get_vswitch_lanzone(stub, 'backbone-lan0',False))
     #print(rpc_client_get_vswitch_lanzone(stub,'3be12991-f039-4a2e-a884-005bb6936f58'))
-    lanzone = rpc_client_register_vswitch_lanzone(stub,'lanzone-customer3', 'backbone')
-    rpc_client_update_vswitch_lanzone(stub, lanzone.id, min_vlan = 418, zone_type = 'customer', max_vlan = 512)
-    print(rpc_client_get_vswitch_lanzone(stub,lanzone.id))
-    rpc_client_unregister_vswitch_lanzone(stub,lanzone.id)
-    lanzones = rpc_client_list_vswitch_lanzones(stub)
-    for lanzone in lanzones:
-        print(lanzone)
+    #lanzone = rpc_client_register_vswitch_lanzone(stub,'lanzone-customer3', 'backbone')
+    #rpc_client_update_vswitch_lanzone(stub, lanzone.id, min_vlan = 418, zone_type = 'customer', max_vlan = 512)
+    #print(rpc_client_get_vswitch_lanzone(stub,lanzone.id))
+    #rpc_client_unregister_vswitch_lanzone(stub,lanzone.id)
+    #lanzones = rpc_client_list_vswitch_lanzones(stub)
+    #for lanzone in lanzones:
+    #    print(lanzone)

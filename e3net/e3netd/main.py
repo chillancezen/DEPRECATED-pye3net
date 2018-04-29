@@ -10,7 +10,7 @@ from e3net.inventory.invt_dist_taskflow import taskflow_init
 from e3net.rpc.grpc_server import grpc_server_init
 from e3net.rpc.grpc_service import invt_e3netd_services
 from e3net.inventory.invt_event_notifier import event_init
-
+import e3net.e3netd.invt_taskflow_decl
 def main():
     #initialize config as the 1st step
     add_config_file('/etc/e3net/e3vswitch-standalone.ini')

@@ -23,6 +23,8 @@ from e3net.ether_service.ether_line_service import _prefetch_create_config
 from e3net.ether_service.ether_line_service import _create_ether_line_topology
 from e3net.ether_service.ether_line_service import _validate_ether_line_topology
 from e3net.ether_service.ether_line_service import _create_ether_line_topology_edge
+from e3net.ether_service.ether_line_service import _push_ether_line_service_to_hosts_on_creation
+from e3net.ether_service.ether_line_service import _delete_ether_line_services
 from e3net.inventory.invt_vswitch_topology_edge import invt_register_vswitch_topology_edge
 from e3net.inventory.invt_vswitch_topology_edge import invt_unregister_vswitch_topology_edge
 from e3net.inventory.invt_vswitch_topology_edge import invt_get_vswitch_topology_edge
@@ -68,6 +70,10 @@ class e_line_tf_commit_topology(task.Task):
                     invt_unregister_vswitch_topology_edge(edge.id, user_sync = True)
         except:
             pass
+class e_line_tf_push_topology(task.Task):
+    def execute(self, config, iResult):
+        _push_ether_line_service_to_hosts_on_creation(config, iResult)
+
 ETHER_LINE_TASKFLOW_CREATION='ether_line_creation'
 
 def generate_ether_line_creation_flow():
@@ -75,7 +81,22 @@ def generate_ether_line_creation_flow():
     lf.add(e_line_tf_create_ether_service())
     lf.add(e_line_tf_create_topology())
     lf.add(e_line_tf_commit_topology())
+    lf.add(e_line_tf_push_topology())
     return lf
 
 register_taskflow_category(ETHER_LINE_TASKFLOW_CREATION, generate_ether_line_creation_flow)
+
+
+
+class e_line_tf_delete_ether_service(task.Task):
+    def execute(self, config, iResult):
+        _delete_ether_line_services(config, iResult)
+
+ETHER_LINE_TASKFLOW_DELETION = 'ether_line_deletion'
+
+def generate_ether_line_deletion_flow():
+    lf = linear_flow.Flow(ETHER_LINE_TASKFLOW_DELETION)
+    lf.add(e_line_tf_delete_ether_service())
+    return lf
+register_taskflow_category(ETHER_LINE_TASKFLOW_DELETION, generate_ether_line_deletion_flow)
 

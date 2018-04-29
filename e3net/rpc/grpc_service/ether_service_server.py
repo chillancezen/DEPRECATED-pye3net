@@ -14,7 +14,11 @@ from e3net.inventory.invt_vswitch_interface import invt_list_vswitch_interfaces
 from e3net.rpc.protos_base import ether_service_pb2
 from e3net.rpc.protos_base import ether_service_pb2_grpc
 from e3net.rpc.protos_base import common_pb2
-
+from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LINE
+from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LAN
+from e3net.ether_service.ether_line_service_taskflow import ETHER_LINE_TASKFLOW_CREATION
+from e3net.ether_service.ether_line_service_taskflow import ETHER_LINE_TASKFLOW_DELETION
+from e3net.inventory.invt_dist_taskflow import e3_taskflow
 def ether_service_to_pb2(e_service):
     e_service_pb2 = ether_service_pb2.res_ether_service()
     e_service_pb2.id = e_service.id
@@ -74,6 +78,26 @@ class ether_service_service(ether_service_pb2_grpc.ether_serviceServicer):
                 services.add(_edge.service_id)
         for _service_id in services:
             yield ether_service_to_pb2(invt_services[_service_id])
+    def rpc_taskflow_create_ether_service(self, request, context):
+        config_spec = dict()
+        config_spec['service_name'] = request.service_name
+        config_spec['service_type'] = request.service_type
+        config_spec['link_type'] = request.link_type
+        config_spec['initial_lanzones'] = request.initial_lanzones
+        config_spec['ban_hosts'] = request.ban_hosts
+        config_spec['ban_lanzones'] = request.ban_lanzones
+        config_spec['ban_interfaces'] = request.ban_interfaces
+        config_spec['is_synced'] = request.is_synced
+        assert (config_spec['service_type'] in [E3NET_ETHER_SERVICE_TYPE_LINE,
+            E3NET_ETHER_SERVICE_TYPE_LAN])
+        if config_spec['service_type'] == E3NET_ETHER_SERVICE_TYPE_LINE:
+            tf = e3_taskflow(ETHER_LINE_TASKFLOW_CREATION,
+                sync = config_spec['is_synced'],
+                store = {'config' : config_spec,
+                    'iResult' : dict()})
+            tf.issue()
+        elif config_spec['service_type'] == E3NET_ETHER_SERVICE_TYPE_LAN:
+            pass
     #do not implement rpc_push_ether_service() here
 publish_rpc_service(ether_service_pb2_grpc.add_ether_serviceServicer_to_server,
                     ether_service_service)

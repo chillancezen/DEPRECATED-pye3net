@@ -12,7 +12,10 @@ from e3net.rpc.protos_base import common_pb2
 
 class ether_service_agent_service(ether_service_pb2_grpc.ether_serviceServicer):
     def rpc_push_ether_services(self, request_iterator, context):
-        raise Exception('reserved, not implemented')
+        services = list()
+        for _service in request_iterator:
+            services.append(_service)
+        return common_pb2.null()
 publish_rpc_service(ether_service_pb2_grpc.add_ether_serviceServicer_to_server,
     ether_service_agent_service)
 

@@ -14,19 +14,23 @@ from e3net.inventory.invt_vswitch_lan_zone import invt_get_vswitch_lan_zone
 from e3net.inventory.invt_vswitch_host import invt_get_vswitch_host
 from e3net.inventory.invt_vswitch_interface import invt_get_vswitch_interface
 from e3net.inventory.invt_vswitch_ether_service import invt_get_vswitch_ether_service
+from e3net.inventory.invt_vswitch_ether_service import invt_unregister_vswitch_ether_service
 from e3net.inventory.invt_vswitch_lan_zone import invt_list_vswitch_lan_zones
 from e3net.inventory.invt_vswitch_interface import invt_list_vswitch_interfaces
 from e3net.inventory.invt_vswitch_host import invt_list_vswitch_hosts
 from e3net.inventory.invt_vswitch_topology_edge import invt_list_vswitch_topology_edges
+from e3net.inventory.invt_vswitch_topology_edge import invt_unregister_vswitch_topology_edge
 from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_LINK_SHARED
 from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_LINK_EXCLUSIVE
 from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_SHARED
 from e3net.db.db_vswitch_interface import E3VSWITCH_INTERFACE_TYPE_EXCLUSIVE
 from e3net.common.e3log import get_e3loger
 from e3net.inventory.invt_vswitch_topology_edge import invt_register_vswitch_topology_edge
-
+from e3net.rpc.grpc_service.ether_service_agent_client import rpc_client_push_ether_services
+from e3net.rpc.grpc_service.ether_service_agent_client import rpc_service
+from e3net.rpc.grpc_client import get_stub
+from e3net.common.e3config import get_config
 e3loger = get_e3loger('e3vswitch_controller')
-
 
 #
 #make sure
@@ -295,17 +299,67 @@ def _create_ether_line_topology_edge(config, iResult):
     end_lanzone_id = config['initial_lanzones'][1]
     e_line = invt_get_vswitch_ether_service(iResult['service_id'])
     target_lanzone_id = end_lanzone_id
+    hosts_to_push = list()
     while True:
         weight, path = permanent_lanzone_set[target_lanzone_id]
         iface0_id, host_id, iface1_id = path
         if not host_id:
             break
+        hosts_to_push.append(host_id)
         spec = dict()
         spec['interface0'] = iface0_id
         spec['interface1'] = iface1_id
         spec['service_id'] = e_line.id
         invt_register_vswitch_topology_edge(spec)
         target_lanzone_id = interfaces[iface1_id].lanzone_id
+    iResult['hosts_to_push'] = hosts_to_push
+
+def _push_ether_line_service_to_hosts_on_creation(config, iResult):
+    host_grpc_port = get_config(None, 'grpc', 'host_grpc_port')
+    e_line = invt_get_vswitch_ether_service(iResult['service_id'])
+    hosts = invt_list_vswitch_hosts()
+    hosts_to_push = iResult['hosts_to_push']
+    for _host_id in hosts_to_push:
+        _host = invt_get_vswitch_host(_host_id)
+        stub = get_stub(_host.host_ip, host_grpc_port, rpc_service)
+        rpc_client_push_ether_services(stub, [e_line])
+
+def _delete_ether_line_services(config, iResult):
+    host_grpc_port = get_config(None, 'grpc', 'host_grpc_port')
+    invt_interfaces = invt_list_vswitch_interfaces()
+    invt_edges = invt_list_vswitch_topology_edges()
+    service_ids = config['service_ids']
+    hosts_to_push = dict()
+    #collect the services to push to hosts
+    for _service_id in service_ids:
+        service = invt_get_vswitch_ether_service(_service_id)
+        edges = [_edge for _edge in invt_edges if _edge.service_id == _service_id]
+        for _edge in edges:
+            iface0 = invt_interfaces[_edge.interface0]
+            iface1 = invt_interfaces[_edge.interface1]
+            host0 = iface0.host_id
+            host1 = iface1.host_id
+            if host0 not in hosts_to_push:
+                hosts_to_push[host0] = dict()
+            if host1 not in hosts_to_push:
+                hosts_to_push[host1] = dict()
+            hosts_to_push[host0][_service_id] = service
+            hosts_to_push[host1][_service_id] = service
+    #delete topology edges before push the services so that the host sync process
+    #know what the applied operation is ['add', 'delete']
+    for _edge_id in invt_edges:
+        _edge = invt_edges[_edge_id]
+        if _edge.service_id in service_ids:
+            continue
+        invt_unregister_vswitch_topology_edge(_edge_id)
+    #push services through RPC call
+    for _host_id in hosts_to_push:
+        _host = invt_get_vswitch_host(_host_id)
+        stub = get_stub(_host.host_ip, host_grpc_port, rpc_service)
+        rpc_client_push_ether_services(stub, list(hosts_to_push[_host_id].values()))
+    #delete ether_services
+    for _servie_id in service_ids:
+        invt_unregister_vswitch_ether_service(_servie_id)
 
 def create_ether_line_topology(config, iResult):
     _prefetch_create_config(config, iResult)

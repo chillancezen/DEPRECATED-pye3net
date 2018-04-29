@@ -85,6 +85,7 @@ def taskflow_base_worker(arg):
 
 
 def register_taskflow_category(category, flow_generator):
+    print('register taskflow:', category, flow_generator)
     invt_taskflow_factory[category] = flow_generator
 
 

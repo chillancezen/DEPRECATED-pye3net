@@ -65,9 +65,11 @@ publish_stub_inventory(rpc_service, ether_service_pb2_grpc.ether_serviceStub)
 if __name__ == '__main__':
     from e3net.common.e3config import add_config_file
     from e3net.common.e3config import load_configs
+    import sys
     add_config_file('/etc/e3net/e3vswitch.ini')
     load_configs()
     stub = get_stub('127.0.0.1', 9418, rpc_service)
+    sys.exit()
     print(rpc_client_get_ether_service(stub, '387a7139-550b-4556-8589-e4e0d61870ca'))
     services = rpc_client_list_ether_services(stub, ['387a7139-550b-4556-8589-e4e0d61870ca',
             '5664f898-1d2c-47ac-ab8c-a604344af411'])
