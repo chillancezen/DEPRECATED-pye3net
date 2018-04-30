@@ -8,7 +8,7 @@ service ether_service {
     rpc rpc_unregister_ether_service(req_ether_service_key) returns (null) {}
 
     rpc rpc_taskflow_create_ether_service(req_service_create_spec) returns (null) {}
-    rpc rpc_taskflow_delete_ether_service(req_ether_service_key) returns (null) {}
+    rpc rpc_taskflow_delete_ether_service(req_service_delete_spec) returns (null) {}
 
     //rpc for e3neta&e3netd interaction
     rpc rpc_push_ether_services(stream res_ether_service) returns (null) {}
@@ -18,14 +18,19 @@ message req_service_create_spec {
     string service_name = 1;
     string service_type = 2;
     string link_type = 3;
-    repeated string initial_lanzones = 4;
-    repeated string ban_hosts = 5;
-    repeated string ban_lanzones = 6;
-    repeated string ban_interfaces = 7;
+    string tenant_id = 4;
+    repeated string initial_lanzones = 5;
+    repeated string ban_hosts = 6;
+    repeated string ban_lanzones = 7;
+    repeated string ban_interfaces = 8;
     //invoking style: blocked or locked
-    bool is_synced = 8;
+    bool is_synced = 9;
 }
 
+message req_service_delete_spec {
+    repeated string service_ids = 1;
+    bool is_synced = 2;
+}
 message req_ether_service_key {
     bool per_tenant = 1;
     //when per_tenant is True, tenant_id_or_uuid represents a tenant ID,

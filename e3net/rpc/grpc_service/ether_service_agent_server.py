@@ -15,6 +15,7 @@ class ether_service_agent_service(ether_service_pb2_grpc.ether_serviceServicer):
         services = list()
         for _service in request_iterator:
             services.append(_service)
+        print('pushed service list:', services)
         return common_pb2.null()
 publish_rpc_service(ether_service_pb2_grpc.add_ether_serviceServicer_to_server,
     ether_service_agent_service)

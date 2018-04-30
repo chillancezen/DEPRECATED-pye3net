@@ -30,6 +30,8 @@ from e3net.inventory.invt_vswitch_topology_edge import invt_unregister_vswitch_t
 from e3net.inventory.invt_vswitch_topology_edge import invt_get_vswitch_topology_edge
 from e3net.inventory.invt_vswitch_topology_edge import invt_list_vswitch_topology_edges
 from e3net.inventory.invt_dist_taskflow import register_taskflow_category
+from e3net.common.e3def import ETHER_LINE_TASKFLOW_CREATION
+from e3net.common.e3def import ETHER_LINE_TASKFLOW_DELETION
 
 class e_line_tf_create_ether_service(task.Task):
     def execute(self, config, iResult):
@@ -74,7 +76,6 @@ class e_line_tf_push_topology(task.Task):
     def execute(self, config, iResult):
         _push_ether_line_service_to_hosts_on_creation(config, iResult)
 
-ETHER_LINE_TASKFLOW_CREATION='ether_line_creation'
 
 def generate_ether_line_creation_flow():
     lf = linear_flow.Flow(ETHER_LINE_TASKFLOW_CREATION)
@@ -92,7 +93,6 @@ class e_line_tf_delete_ether_service(task.Task):
     def execute(self, config, iResult):
         _delete_ether_line_services(config, iResult)
 
-ETHER_LINE_TASKFLOW_DELETION = 'ether_line_deletion'
 
 def generate_ether_line_deletion_flow():
     lf = linear_flow.Flow(ETHER_LINE_TASKFLOW_DELETION)

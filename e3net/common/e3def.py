@@ -20,3 +20,14 @@ E3NET_ETHER_SERVICE_TYPE_LAN = 'e-lan'
 E3NET_ETHER_SERVICE_LINK_SHARED = 'shared'
 E3NET_ETHER_SERVICE_LINK_EXCLUSIVE = 'exclusive'
 
+
+
+
+
+#taskflow definition
+ETHER_LINE_TASKFLOW_CREATION = 'ether_line_creation'
+ETHER_LINE_TASKFLOW_DELETION = 'ether_line_deletion'
+ETHER_LAN_TASKFLOW_CREATION = 'ether_lan_creation'
+ETHER_LAN_TASKFLOW_UPDATE = 'ether_lan_update'
+ETHER_LAN_TASKFLOW_DELETION = 'ether_lan_deletion'
+

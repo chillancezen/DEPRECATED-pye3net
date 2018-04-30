@@ -20,7 +20,7 @@ def rpc_client_get_ether_service(stub, uuid):
     key.tenant_id_or_uuid = uuid
     return stub.rpc_get_ether_service(key)
 
-def rpc_client_list_ether_services(stub,uuid_list):
+def rpc_client_list_ether_services(stub,uuid_list = []):
     def __key_generator0(_uuid_list):
         for _uuid in _uuid_list:
             key = ether_service_pb2.req_ether_service_key()
@@ -59,6 +59,40 @@ def rpc_client_pull_ether_services(stub, host_uuid):
     key = ether_service_pb2.req_ether_service_key()
     key.tenant_id_or_uuid = host_uuid
     return stub.rpc_pull_ether_services(key)
+def rpc_client_taskflow_create_ether_service(stub,
+    service_name,
+    tenant_id,
+    initial_lanzones,
+    ban_hosts = [],
+    ban_lanzones = [],
+    ban_interfaces = [],
+    service_type = E3NET_ETHER_SERVICE_TYPE_LINE,
+    link_type = E3NET_ETHER_SERVICE_LINK_SHARED,
+    is_synced = True):
+    spec = ether_service_pb2.req_service_create_spec()
+    spec.service_name = service_name
+    spec.service_type = service_type
+    spec.tenant_id = tenant_id
+    spec.link_type = link_type
+    spec.is_synced = is_synced
+    for il in initial_lanzones:
+        spec.initial_lanzones.append(il)
+    for bh in ban_hosts:
+        spec.ban_hosts.append(bh)
+    for bl in ban_lanzones:
+        spec.ban_lanzones.append(bl)
+    for bi in ban_interfaces:
+        spec.ban_interfaces.append(bi)
+    stub.rpc_taskflow_create_ether_service(spec)
+
+def rpc_client_taskflow_delete_ether_service(stub,
+    service_ids,
+    is_synced = True):
+    spec = ether_service_pb2.req_service_delete_spec()
+    for _service_id in service_ids:
+        spec.service_ids.append(_service_id)
+    spec.is_synced = is_synced
+    stub.rpc_taskflow_delete_ether_service(spec)
 
 publish_stub_inventory(rpc_service, ether_service_pb2_grpc.ether_serviceStub)
 
@@ -69,6 +103,16 @@ if __name__ == '__main__':
     add_config_file('/etc/e3net/e3vswitch.ini')
     load_configs()
     stub = get_stub('127.0.0.1', 9418, rpc_service)
+    rpc_client_taskflow_create_ether_service(stub,
+        service_name = 'ether_line_0',
+        tenant_id = 'c2204787-df90-473b-8ed6-52838eab1c32',
+        initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c',
+            '2ddc6ac9-5216-4e25-8414-9e088c33a94f',
+            'abe1b66e-7f34-4857-bdb8-ec27b76373a3'],
+        service_type = E3NET_ETHER_SERVICE_TYPE_LAN)
+    services =  rpc_client_list_ether_services(stub)
+    rpc_client_taskflow_delete_ether_service(stub, [e.id for e in services])
+    #rpc_client_taskflow_delete_ether_service(stub, ['a3383c77-c5de-46f3-928a-60626196f36b'])
     sys.exit()
     print(rpc_client_get_ether_service(stub, '387a7139-550b-4556-8589-e4e0d61870ca'))
     services = rpc_client_list_ether_services(stub, ['387a7139-550b-4556-8589-e4e0d61870ca',

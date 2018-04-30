@@ -317,7 +317,6 @@ def _create_ether_line_topology_edge(config, iResult):
 def _push_ether_line_service_to_hosts_on_creation(config, iResult):
     host_grpc_port = get_config(None, 'grpc', 'host_grpc_port')
     e_line = invt_get_vswitch_ether_service(iResult['service_id'])
-    hosts = invt_list_vswitch_hosts()
     hosts_to_push = iResult['hosts_to_push']
     for _host_id in hosts_to_push:
         _host = invt_get_vswitch_host(_host_id)
@@ -333,7 +332,8 @@ def _delete_ether_line_services(config, iResult):
     #collect the services to push to hosts
     for _service_id in service_ids:
         service = invt_get_vswitch_ether_service(_service_id)
-        edges = [_edge for _edge in invt_edges if _edge.service_id == _service_id]
+        edges = [invt_edges[_edge] for _edge in invt_edges if \
+        invt_edges[_edge].service_id == _service_id]
         for _edge in edges:
             iface0 = invt_interfaces[_edge.interface0]
             iface1 = invt_interfaces[_edge.interface1]
@@ -349,7 +349,7 @@ def _delete_ether_line_services(config, iResult):
     #know what the applied operation is ['add', 'delete']
     for _edge_id in invt_edges:
         _edge = invt_edges[_edge_id]
-        if _edge.service_id in service_ids:
+        if _edge.service_id not in service_ids:
             continue
         invt_unregister_vswitch_topology_edge(_edge_id)
     #push services through RPC call

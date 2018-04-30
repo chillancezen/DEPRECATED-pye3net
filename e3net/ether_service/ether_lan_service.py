@@ -29,17 +29,23 @@ from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_TYPE_LINE
 from e3net.db.db_vswitch_ether_service import E3NET_ETHER_SERVICE_TYPE_LAN
 from e3net.inventory.invt_vswitch_topology_edge import invt_list_vswitch_topology_edges
 from e3net.common.e3log import get_e3loger
+from e3net.rpc.grpc_client import get_stub
+from e3net.common.e3config import get_config
+from e3net.rpc.grpc_service.ether_service_agent_client import rpc_service
+from e3net.rpc.grpc_service.ether_service_agent_client import rpc_client_push_ether_services
 from e3net.inventory.invt_vswitch_topology_edge import invt_register_vswitch_topology_edge
 from e3net.inventory.invt_vswitch_topology_edge import invt_unregister_vswitch_topology_edge
 #share the same config prefetch function
 from e3net.ether_service.ether_line_service import _prefetch_create_config
 e3loger = get_e3loger('e3vswitch_controller')
 
-E_LAN_OPERATION_ADDITION='add'
-E_LAN_OPERATION_REMOVAL='remove'
+E_LAN_OPERATION_ADDITION = 'add'
+E_LAN_OPERATION_REMOVAL = 'remove'
+E_LAN_OPERATION_CREATION = 'create'
 
 def _create_ether_lan_topology(config, iResult):
     assert (len(iResult['initial_lanzones']) >= 2)
+    iResult['operation'] = E_LAN_OPERATION_CREATION
     #
     #use Prim's algorithm to determine the minimum spanning tree aamong lanzones
     #
@@ -320,14 +326,13 @@ def _validate_ether_lan_topology(config, iResult):
             assert (degree[lanzone_id] == 1)
         else:
             assert (degree[lanzone_id] > 1)
-    if iResult['operation'] == E_LAN_OPERATION_ADDITION:
+    if iResult['operation'] == E_LAN_OPERATION_ADDITION or \
+        iResult['operation'] == E_LAN_OPERATION_CREATION:
         for lanzone_id in initial_lanzone_set:
             assert (lanzone_id in permanent_lanzone_set)
     elif iResult['operation'] == E_LAN_OPERATION_REMOVAL:
         for lanzone_id in initial_lanzone_set:
             assert (lanzone_id not in permanent_lanzone_set)
-    else:
-        assert (False)
     #check whether a circle present
     #by search the path in Depth First manner
     vertext = dict()
@@ -370,30 +375,40 @@ def _validate_ether_lan_topology(config, iResult):
             poped_lanzone_id = path_stack.pop()
             e3loger.debug('circle tedection: pop lanzone:%s' %
                           (poped_lanzone_id))
-    if iResult['operation'] == E_LAN_OPERATION_ADDITION:
+    if iResult['operation'] == E_LAN_OPERATION_ADDITION or \
+        iResult['operation'] == E_LAN_OPERATION_CREATION:
         for _lanzone_id in initial_lanzone_set:
             assert (_lanzone_id in used)
     elif iResult['operation'] == E_LAN_OPERATION_REMOVAL:
         for _lanzone_id in initial_lanzone_set:
             assert (_lanzone_id not in used)
-    else:
-        assert (False)
 
 def _create_ether_lan_topology_edge(config, iResult):
     interfaces = invt_list_vswitch_interfaces()
     permanent_lanzone_set = iResult['permanent_lanzone_set']
     e_lan = invt_get_vswitch_ether_service(iResult['service_id'])
+    host_to_push = list()
     for _lanzone_id in permanent_lanzone_set:
         _, _path = permanent_lanzone_set[_lanzone_id]
         _iface0_id, _host_id, _iface1_id = _path
         if not _host_id:
             continue
+        host_to_push.append(_host_id)
         spec = dict()
         spec['interface0'] = _iface0_id
         spec['interface1'] = _iface1_id
         spec['service_id'] = e_lan.id
         invt_register_vswitch_topology_edge(spec)
+    iResult['host_to_push'] = host_to_push
 
+def _push_ether_lan_topology_on_creation(config, iResult):
+    host_grpc_port = get_config(None, 'grpc', 'host_grpc_port')
+    host_to_push = iResult['host_to_push']
+    e_lan = invt_get_vswitch_ether_service(iResult['service_id'])
+    for _host_id in host_to_push:
+        _host = invt_get_vswitch_host(_host_id)
+        stub = get_stub(_host.host_ip, host_grpc_port, rpc_service)
+        rpc_client_push_ether_services(stub, [e_lan])
 
 def _prefetch_ether_lan_update_config(config, iResult):
     e_lan = invt_get_vswitch_ether_service(config['service_id'])

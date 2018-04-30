@@ -16,8 +16,12 @@ from e3net.rpc.protos_base import ether_service_pb2_grpc
 from e3net.rpc.protos_base import common_pb2
 from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LINE
 from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LAN
-from e3net.ether_service.ether_line_service_taskflow import ETHER_LINE_TASKFLOW_CREATION
-from e3net.ether_service.ether_line_service_taskflow import ETHER_LINE_TASKFLOW_DELETION
+from e3net.common.e3def import ETHER_LINE_TASKFLOW_CREATION
+from e3net.common.e3def import ETHER_LINE_TASKFLOW_DELETION
+from e3net.common.e3def import ETHER_LAN_TASKFLOW_CREATION
+from e3net.common.e3def import ETHER_LAN_TASKFLOW_UPDATE
+from e3net.common.e3def import ETHER_LAN_TASKFLOW_DELETION
+
 from e3net.inventory.invt_dist_taskflow import e3_taskflow
 def ether_service_to_pb2(e_service):
     e_service_pb2 = ether_service_pb2.res_ether_service()
@@ -83,10 +87,11 @@ class ether_service_service(ether_service_pb2_grpc.ether_serviceServicer):
         config_spec['service_name'] = request.service_name
         config_spec['service_type'] = request.service_type
         config_spec['link_type'] = request.link_type
-        config_spec['initial_lanzones'] = request.initial_lanzones
-        config_spec['ban_hosts'] = request.ban_hosts
-        config_spec['ban_lanzones'] = request.ban_lanzones
-        config_spec['ban_interfaces'] = request.ban_interfaces
+        config_spec['tenant_id'] = request.tenant_id
+        config_spec['initial_lanzones'] = [il for il in request.initial_lanzones]
+        config_spec['ban_hosts'] = [bh for bh in request.ban_hosts]
+        config_spec['ban_lanzones'] = [bl for bl in request.ban_lanzones]
+        config_spec['ban_interfaces'] = [bi for bi in request.ban_interfaces]
         config_spec['is_synced'] = request.is_synced
         assert (config_spec['service_type'] in [E3NET_ETHER_SERVICE_TYPE_LINE,
             E3NET_ETHER_SERVICE_TYPE_LAN])
@@ -97,7 +102,33 @@ class ether_service_service(ether_service_pb2_grpc.ether_serviceServicer):
                     'iResult' : dict()})
             tf.issue()
         elif config_spec['service_type'] == E3NET_ETHER_SERVICE_TYPE_LAN:
+            tf =e3_taskflow(ETHER_LAN_TASKFLOW_CREATION,
+                sync = config_spec['is_synced'],
+                store = {'config' : config_spec,
+                    'iResult' : dict()})
+            tf.issue()
+        return common_pb2.null()
+
+    def rpc_taskflow_delete_ether_service(self, request, context):
+        e_line_service_ids = list()
+        e_lan_service_ids = list()
+        spec = request
+        for _service_id in spec.service_ids:
+            e_service = invt_get_vswitch_ether_service(_service_id)
+            if e_service.service_type == E3NET_ETHER_SERVICE_TYPE_LINE:
+                e_line_service_ids.append(_service_id)
+            elif e_service.service_type == E3NET_ETHER_SERVICE_TYPE_LAN:
+                e_lan_service_ids.append(_service_id)
+        if len(e_line_service_ids):
+            config = {'service_ids' : e_line_service_ids}
+            tf = e3_taskflow(ETHER_LINE_TASKFLOW_DELETION,
+                sync = spec.is_synced,
+                store = {'config' : config,
+                    'iResult' : dict()})
+            tf.issue()
+        if len(e_lan_service_ids):
             pass
+        return common_pb2.null()
     #do not implement rpc_push_ether_service() here
 publish_rpc_service(ether_service_pb2_grpc.add_ether_serviceServicer_to_server,
                     ether_service_service)

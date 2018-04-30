@@ -42,7 +42,7 @@ class ether_serviceStub(object):
         )
     self.rpc_taskflow_delete_ether_service = channel.unary_unary(
         '/ether_service/rpc_taskflow_delete_ether_service',
-        request_serializer=ether__service__pb2.req_ether_service_key.SerializeToString,
+        request_serializer=ether__service__pb2.req_service_delete_spec.SerializeToString,
         response_deserializer=common__pb2.null.FromString,
         )
     self.rpc_push_ether_services = channel.stream_unary(
@@ -147,7 +147,7 @@ def add_ether_serviceServicer_to_server(servicer, server):
       ),
       'rpc_taskflow_delete_ether_service': grpc.unary_unary_rpc_method_handler(
           servicer.rpc_taskflow_delete_ether_service,
-          request_deserializer=ether__service__pb2.req_ether_service_key.FromString,
+          request_deserializer=ether__service__pb2.req_service_delete_spec.FromString,
           response_serializer=common__pb2.null.SerializeToString,
       ),
       'rpc_push_ether_services': grpc.stream_unary_rpc_method_handler(
