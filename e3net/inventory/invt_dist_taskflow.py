@@ -16,16 +16,16 @@ import time
 import contextlib
 from e3net.inventory.invt_base import get_inventory_base
 import traceback
+from e3net.common.e3def import E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN
+from e3net.common.e3def import E3TASKFLOW_SCHEDULE_STATUS_ISSUED
+from e3net.common.e3def import E3TASKFLOW_SCHEDULE_STATUS_SUCCESSFUL
+from e3net.common.e3def import E3TASKFLOW_SCHEDULE_STATUS_FAILED
+from e3net.common.e3def import taskflow_root_key as root_key
 
 _taskflow_backend = None
 _taskflow_queue = queue.Queue()
 invt_taskflow_factory = dict()
 
-root_key = 'taskflow'
-E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN = 'unknown'
-E3TASKFLOW_SCHEDULE_STATUS_ISSUED = 'issued'
-E3TASKFLOW_SCHEDULE_STATUS_SUCCESSFUL = 'successful'
-E3TASKFLOW_SCHEDULE_STATUS_FAILED = 'failed'
 e3_taskflow_nr_worker = 4
 
 e3loger = get_e3loger('e3vswitch_controller')

@@ -16,6 +16,7 @@ from e3net.inventory.invt_vswitch_ether_service import invt_unregister_vswitch_e
 from e3net.inventory.invt_vswitch_ether_service import invt_get_vswitch_ether_service
 from e3net.inventory.invt_dist_taskflow import register_taskflow_category
 from e3net.ether_service.ether_line_service_taskflow import e_line_tf_create_ether_service as e_lan_tf_create_ether_service
+from e3net.ether_service.ether_line_service_taskflow import e_line_tf_delete_ether_service as e_lan_tf_delete_ether_service
 from e3net.ether_service.ether_line_service import _prefetch_create_config
 from e3net.ether_service.ether_lan_service import _create_ether_lan_topology
 from e3net.ether_service.ether_lan_service import _validate_ether_lan_topology
@@ -25,8 +26,10 @@ from e3net.ether_service.ether_lan_service import _add_lanzones_to_ether_lan
 from e3net.ether_service.ether_lan_service import _synchronize_ether_topology_update
 from e3net.ether_service.ether_lan_service import _remove_lanzones_from_ether_lan
 from e3net.ether_service.ether_lan_service import _push_ether_lan_topology_on_creation
+from e3net.ether_service.ether_lan_service import _push_ether_lan_topology_on_creation as _push_ether_lan_topology_on_update
 from e3net.common.e3def import ETHER_LAN_TASKFLOW_CREATION
-from e3net.common.e3def import ETHER_LAN_TASKFLOW_UPDATE
+from e3net.common.e3def import ETHER_LAN_TASKFLOW_UPDATE_ADD
+from e3net.common.e3def import ETHER_LAN_TASKFLOW_UPDATE_REMOVE
 from e3net.common.e3def import ETHER_LAN_TASKFLOW_DELETION
 
 class e_lan_tf_create_topology(task.Task):
@@ -64,13 +67,18 @@ class e_lan_tf_commit_topology_addition(task.Task):
         _validate_ether_lan_topology(config, iResult)
         _synchronize_ether_topology_update(config, iResult)
 
+class e_lan_tf_push_topology_on_update(task.Task):
+    def execute(self, config, iResult):
+        _push_ether_lan_topology_on_update(config, iResult)
+
 def  generate_ether_lan_addition_flow():
-    lf = linear_flow.Flow(ETHER_LAN_TASKFLOW_UPDATE)
+    lf = linear_flow.Flow(ETHER_LAN_TASKFLOW_UPDATE_ADD)
     lf.add(e_lan_tf_add_topology())
     lf.add(e_lan_tf_commit_topology_addition())
+    lf.add(e_lan_tf_push_topology_on_update())
     return lf
 
-register_taskflow_category(ETHER_LAN_TASKFLOW_UPDATE, generate_ether_lan_addition_flow)
+register_taskflow_category(ETHER_LAN_TASKFLOW_UPDATE_ADD, generate_ether_lan_addition_flow)
 
 class e_lan_tf_remove_topology(task.Task):
     def execute(self, config, iResult):
@@ -83,9 +91,18 @@ class e_lan_tf_commit_topology_removal(task.Task):
         _synchronize_ether_topology_update(config, iResult)
 
 def generate_ether_lan_removal_flow():
-    lf = linear_flow.Flow(ETHER_LAN_TASKFLOW_DELETION)
+    lf = linear_flow.Flow(ETHER_LAN_TASKFLOW_UPDATE_REMOVE)
     lf.add(e_lan_tf_remove_topology())
     lf.add(e_lan_tf_commit_topology_removal())
+    lf.add(e_lan_tf_push_topology_on_update())
     return lf
 
-register_taskflow_category(ETHER_LAN_TASKFLOW_DELETION, generate_ether_lan_removal_flow)
+register_taskflow_category(ETHER_LAN_TASKFLOW_UPDATE_REMOVE, generate_ether_lan_removal_flow)
+
+
+def generate_ether_lan_deletion_flow():
+    tf = linear_flow.Flow(ETHER_LAN_TASKFLOW_DELETION)
+    tf.add(e_lan_tf_delete_ether_service())
+    return tf
+
+register_taskflow_category(ETHER_LAN_TASKFLOW_DELETION, generate_ether_lan_deletion_flow)

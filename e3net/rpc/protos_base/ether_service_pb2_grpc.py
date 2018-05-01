@@ -45,6 +45,11 @@ class ether_serviceStub(object):
         request_serializer=ether__service__pb2.req_service_delete_spec.SerializeToString,
         response_deserializer=common__pb2.null.FromString,
         )
+    self.rpc_taslflow_update_ether_lan_service = channel.unary_unary(
+        '/ether_service/rpc_taslflow_update_ether_lan_service',
+        request_serializer=ether__service__pb2.req_lan_service_update_spec.SerializeToString,
+        response_deserializer=common__pb2.null.FromString,
+        )
     self.rpc_push_ether_services = channel.stream_unary(
         '/ether_service/rpc_push_ether_services',
         request_serializer=ether__service__pb2.res_ether_service.SerializeToString,
@@ -103,6 +108,13 @@ class ether_serviceServicer(object):
     context.set_details('Method not implemented!')
     raise NotImplementedError('Method not implemented!')
 
+  def rpc_taslflow_update_ether_lan_service(self, request, context):
+    # missing associated documentation comment in .proto file
+    pass
+    context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+    context.set_details('Method not implemented!')
+    raise NotImplementedError('Method not implemented!')
+
   def rpc_push_ether_services(self, request_iterator, context):
     """rpc for e3neta&e3netd interaction
     """
@@ -148,6 +160,11 @@ def add_ether_serviceServicer_to_server(servicer, server):
       'rpc_taskflow_delete_ether_service': grpc.unary_unary_rpc_method_handler(
           servicer.rpc_taskflow_delete_ether_service,
           request_deserializer=ether__service__pb2.req_service_delete_spec.FromString,
+          response_serializer=common__pb2.null.SerializeToString,
+      ),
+      'rpc_taslflow_update_ether_lan_service': grpc.unary_unary_rpc_method_handler(
+          servicer.rpc_taslflow_update_ether_lan_service,
+          request_deserializer=ether__service__pb2.req_lan_service_update_spec.FromString,
           response_serializer=common__pb2.null.SerializeToString,
       ),
       'rpc_push_ether_services': grpc.stream_unary_rpc_method_handler(

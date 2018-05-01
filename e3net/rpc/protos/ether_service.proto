@@ -9,7 +9,7 @@ service ether_service {
 
     rpc rpc_taskflow_create_ether_service(req_service_create_spec) returns (null) {}
     rpc rpc_taskflow_delete_ether_service(req_service_delete_spec) returns (null) {}
-
+    rpc rpc_taslflow_update_ether_lan_service(req_lan_service_update_spec) returns (null) {}
     //rpc for e3neta&e3netd interaction
     rpc rpc_push_ether_services(stream res_ether_service) returns (null) {}
     rpc rpc_pull_ether_services(req_ether_service_key) returns(stream res_ether_service) {}
@@ -26,7 +26,16 @@ message req_service_create_spec {
     //invoking style: blocked or locked
     bool is_synced = 9;
 }
-
+message req_lan_service_update_spec {
+    string service_id = 1;
+    string operation = 2;
+    repeated string ban_hosts = 3;
+    repeated string ban_lanzones = 4;
+    repeated string ban_interfaces = 5;
+    repeated string initial_lanzones = 6;
+    //invoking stype
+    bool is_synced = 7;
+}
 message req_service_delete_spec {
     repeated string service_ids = 1;
     bool is_synced = 2;

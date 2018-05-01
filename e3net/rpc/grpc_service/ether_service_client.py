@@ -12,7 +12,8 @@ from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LINE
 from e3net.common.e3def import E3NET_ETHER_SERVICE_TYPE_LAN
 from e3net.common.e3def import E3NET_ETHER_SERVICE_LINK_SHARED
 from e3net.common.e3def import E3NET_ETHER_SERVICE_LINK_EXCLUSIVE
-
+from e3net.common.e3def import E_LAN_OPERATION_ADDITION
+from e3net.common.e3def import E_LAN_OPERATION_REMOVAL
 rpc_service = 'ether_service'
 
 def rpc_client_get_ether_service(stub, uuid):
@@ -93,6 +94,27 @@ def rpc_client_taskflow_delete_ether_service(stub,
         spec.service_ids.append(_service_id)
     spec.is_synced = is_synced
     stub.rpc_taskflow_delete_ether_service(spec)
+def rpc_client_taskflow_update_ether_lan_service(stub,
+    service_id,
+    operation,
+    initial_lanzones,
+    ban_hosts = [],
+    ban_lanzones = [],
+    ban_interfaces =[],
+    is_synced = True):
+    spec = ether_service_pb2.req_lan_service_update_spec()
+    spec.service_id = service_id
+    spec.operation = operation
+    for il in initial_lanzones:
+        spec.initial_lanzones.append(il)
+    for bh in ban_hosts:
+        spec.ban_hosts.append(bh)
+    for bl in ban_lanzones:
+        spec.ban_lanzones.append(bl)
+    for bi in ban_interfaces:
+        spec.ban_interfaces.append(bi)
+    spec.is_synced =is_synced
+    stub.rpc_taslflow_update_ether_lan_service(spec)
 
 publish_stub_inventory(rpc_service, ether_service_pb2_grpc.ether_serviceStub)
 
@@ -109,9 +131,12 @@ if __name__ == '__main__':
         initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c',
             '2ddc6ac9-5216-4e25-8414-9e088c33a94f',
             'abe1b66e-7f34-4857-bdb8-ec27b76373a3'],
-        service_type = E3NET_ETHER_SERVICE_TYPE_LAN)
+        service_type = E3NET_ETHER_SERVICE_TYPE_LAN,
+        is_synced = False)
+    rpc_client_taskflow_update_ether_lan_service(stub,'c29ac91f-5516-4d0c-b257-769bc4f71545',E_LAN_OPERATION_REMOVAL,initial_lanzones = ['2ddc6ac9-5216-4e25-8414-9e088c33a94f'], is_synced = False)
+    rpc_client_taskflow_update_ether_lan_service(stub,'c29ac91f-5516-4d0c-b257-769bc4f71545',E_LAN_OPERATION_ADDITION,initial_lanzones = ['2ddc6ac9-5216-4e25-8414-9e088c33a94f'], is_synced = False)
     services =  rpc_client_list_ether_services(stub)
-    rpc_client_taskflow_delete_ether_service(stub, [e.id for e in services])
+    #rpc_client_taskflow_delete_ether_service(stub, [e.id for e in services])
     #rpc_client_taskflow_delete_ether_service(stub, ['a3383c77-c5de-46f3-928a-60626196f36b'])
     sys.exit()
     print(rpc_client_get_ether_service(stub, '387a7139-550b-4556-8589-e4e0d61870ca'))

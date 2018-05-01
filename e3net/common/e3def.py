@@ -21,13 +21,22 @@ E3NET_ETHER_SERVICE_LINK_SHARED = 'shared'
 E3NET_ETHER_SERVICE_LINK_EXCLUSIVE = 'exclusive'
 
 
+#taskflow status definition
+E3TASKFLOW_SCHEDULE_STATUS_UNKNOWN = 'unknown'
+E3TASKFLOW_SCHEDULE_STATUS_ISSUED = 'issued'
+E3TASKFLOW_SCHEDULE_STATUS_SUCCESSFUL = 'successful'
+E3TASKFLOW_SCHEDULE_STATUS_FAILED = 'failed'
 
-
+taskflow_root_key = 'taskflow'
 
 #taskflow definition
 ETHER_LINE_TASKFLOW_CREATION = 'ether_line_creation'
 ETHER_LINE_TASKFLOW_DELETION = 'ether_line_deletion'
 ETHER_LAN_TASKFLOW_CREATION = 'ether_lan_creation'
-ETHER_LAN_TASKFLOW_UPDATE = 'ether_lan_update'
+ETHER_LAN_TASKFLOW_UPDATE_ADD = 'ether_lan_update_add'
+ETHER_LAN_TASKFLOW_UPDATE_REMOVE = 'ether_lan_update_remove'
 ETHER_LAN_TASKFLOW_DELETION = 'ether_lan_deletion'
 
+E_LAN_OPERATION_ADDITION = 'add'
+E_LAN_OPERATION_REMOVAL = 'remove'
+E_LAN_OPERATION_CREATION = 'create'

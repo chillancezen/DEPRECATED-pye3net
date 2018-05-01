@@ -35,13 +35,12 @@ from e3net.rpc.grpc_service.ether_service_agent_client import rpc_service
 from e3net.rpc.grpc_service.ether_service_agent_client import rpc_client_push_ether_services
 from e3net.inventory.invt_vswitch_topology_edge import invt_register_vswitch_topology_edge
 from e3net.inventory.invt_vswitch_topology_edge import invt_unregister_vswitch_topology_edge
+from e3net.common.e3def import E_LAN_OPERATION_ADDITION
+from e3net.common.e3def import E_LAN_OPERATION_REMOVAL
+from e3net.common.e3def import E_LAN_OPERATION_CREATION
 #share the same config prefetch function
 from e3net.ether_service.ether_line_service import _prefetch_create_config
 e3loger = get_e3loger('e3vswitch_controller')
-
-E_LAN_OPERATION_ADDITION = 'add'
-E_LAN_OPERATION_REMOVAL = 'remove'
-E_LAN_OPERATION_CREATION = 'create'
 
 def _create_ether_lan_topology(config, iResult):
     assert (len(iResult['initial_lanzones']) >= 2)
@@ -865,6 +864,15 @@ def _synchronize_ether_topology_update(config, iResult):
         if not host_id:
             continue
         service_edges[_lanzone_id] = _path
+    host_to_push = list()
+    for _edge_id in edges:
+        _edge  = edges[_edge_id]
+        _iface0 = interfaces[_edge.interface0]
+        _iface1 = interfaces[_edge.interface1]
+        if _iface0.host_id not in host_to_push:
+            host_to_push.append(_iface0.host_id)
+        if _iface1.host_id not in host_to_push:
+            host_to_push.append(_iface1.host_id)
     if iResult['operation'] == E_LAN_OPERATION_ADDITION:
         #create new edge if the path is not in the edges set
         for _lanzone_id in service_edges:
@@ -885,6 +893,8 @@ def _synchronize_ether_topology_update(config, iResult):
                 spec['service_id'] = service_id
                 #this is supposed to be not a failure
                 invt_register_vswitch_topology_edge(spec)
+                if host_id not in host_to_push:
+                    host_to_push.append(host_id)
     elif iResult['operation'] == E_LAN_OPERATION_REMOVAL:
         for _edge in iResult['deleted_path']:
             _iface0_id = _edge[0]
@@ -902,7 +912,7 @@ def _synchronize_ether_topology_update(config, iResult):
             invt_unregister_vswitch_topology_edge(target_edge_id)
     else:
         raise e3_exception(E3_EXCEPTION_INVALID_ARGUMENT)
-
+    iResult['host_to_push'] = host_to_push
 def remove_lanzones_from_ether_lan_topology(config, iResult):
     _prefetch_ether_lan_update_config(config, iResult)
     _remove_lanzones_from_ether_lan(config, iResult)
