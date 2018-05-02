@@ -148,7 +148,7 @@ register_standalone_taskflow_category('do-foo', generate_vm_creation_flow)
 if __name__ == '__main__':
     standalone_taskflow_init()
 
-    tf = e3standalone_taskflow('do-foo', sync = True, store = {'spec' : 'cute-eeepw'})
+    tf = e3standalone_taskflow('do-foo', sync = True, store = {'spec' : list_standalone_taskflows})
     tf1 = e3standalone_taskflow('do-foo', sync = True, store = {'spec' : 'cute-eeepw'})
     tf.issue()
     tf1.issue()

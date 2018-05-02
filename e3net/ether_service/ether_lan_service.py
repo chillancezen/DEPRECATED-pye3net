@@ -867,6 +867,8 @@ def _synchronize_ether_topology_update(config, iResult):
     host_to_push = list()
     for _edge_id in edges:
         _edge  = edges[_edge_id]
+        if _edge.service_id != service_id:
+            continue
         _iface0 = interfaces[_edge.interface0]
         _iface1 = interfaces[_edge.interface1]
         if _iface0.host_id not in host_to_push:
