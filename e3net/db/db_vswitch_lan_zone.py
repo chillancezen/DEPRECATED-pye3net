@@ -21,13 +21,12 @@ from e3net.common.e3log import get_e3loger
 import traceback
 from e3net.common.e3keeper import root_keeper
 from e3net.db.db_base import register_database_load_entrance
-
+from e3net.common.e3def import E3VSWITCH_LAN_ZONE_TYPE_BACKBONE
+from e3net.common.e3def import E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER
 e3loger = get_e3loger('e3vswitch_controller')
 
 DB_NAME = 'E3NET_VSWITCH'
 
-E3VSWITCH_LAN_ZONE_TYPE_BACKBONE = 'backbone'
-E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER = 'customer'
 
 
 class E3VswitchLANZone(DB_BASE):
