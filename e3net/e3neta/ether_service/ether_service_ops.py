@@ -183,7 +183,10 @@ def resolve_rechability_information(iResult):
         if lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
             assert (rechability_mapping[lanzone_id] in interface_neighbor_mapping)
         print(lanzone_id, 'via', rechability_mapping[lanzone_id])
-            
+    iResult['interface_neighbor_mapping'] = interface_neighbor_mapping
+    iResult['rechability_mapping'] = rechability_mapping
+    iResult['host_interface_mappping'] = host_interface_mappping
+ 
 class ether_service_taskflow_prefetch_service_elements(task.Task):
     def execute(self, config, iResult):
         services = config['services']
@@ -209,7 +212,7 @@ if __name__ == '__main__':
     from e3net.e3neta.e3neta_config import e3neta_config_init
     from e3net.e3neta.e3neta_db import e3neta_db_init
     from e3net.e3neta.e3neta_agent_ops import e3neta_agent_connect
-    add_config_file('/etc/e3net/e3neta.ini.3')
+    add_config_file('/etc/e3net/e3neta.ini.1')
     load_configs()
     e3neta_config_init()
     standalone_taskflow_init()

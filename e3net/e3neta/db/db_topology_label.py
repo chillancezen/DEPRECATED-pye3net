@@ -25,6 +25,8 @@ DB_NAME = 'e3net_agent'
 LABEL_DIRECTION_INGRESS = 'ingress'
 LABEL_DIRECTION_EGRESS = 'egress'
 
+DUMMY_MULTICAST_LANZONE = 'dummy_multicast_lanzone'
+
 class topology_label(DB_BASE):
     __tablename__ = 'topology_label'
     id = Column(String(64), primary_key = True)
@@ -63,7 +65,7 @@ class topology_label(DB_BASE):
 
 topology_label_guard = e3rwlock()
 #calculate the label_id for the nexthop
-def db_update_unicast_topology_label(customer_lanzone,
+def db_update_topology_label(customer_lanzone,
     interface_id,
     neighbor_id,
     direction,
@@ -79,8 +81,7 @@ def db_update_unicast_topology_label(customer_lanzone,
         session.begin()
         labels = session.query(topology_label).filter(and_(
             topology_label.interface_id == interface_id,
-            topology_label.direction == direction,
-            topology_label.is_unicast == True)).order_by(
+            topology_label.direction == direction)).order_by(
             topology_label.label_id).all()
         target_label = None
         least_label_id = 1
@@ -92,9 +93,10 @@ def db_update_unicast_topology_label(customer_lanzone,
             if _label.label_id == least_label_id:
                 least_label_id += 1
         if target_label:
+            #if a ingress is allocated, it will not change
             target_label.label_id = allocated_label_id if \
                 direction == LABEL_DIRECTION_EGRESS else \
-                least_label_id
+                target_label.label_id
             session.commit()
         else:
             target_label = topology_label()
@@ -104,7 +106,9 @@ def db_update_unicast_topology_label(customer_lanzone,
             target_label.neighbor_id = neighbor_id
             target_label.interface_id = interface_id
             target_label.direction = direction
-            target_label.is_unicast = True
+            target_label.is_unicast = True if \
+                customer_lanzone == DUMMY_MULTICAST_LANZONE else \
+                False
             target_label.label_id = allocated_label_id if \
                 direction == LABEL_DIRECTION_EGRESS else \
                 least_label_id
@@ -114,7 +118,7 @@ def db_update_unicast_topology_label(customer_lanzone,
     finally:
         session.close()
         topology_label_guard.write_unlock()
-def db_get_unicast_topology_label(service_id,
+def db_get_topology_label(service_id,
     customer_lanzone,
     direction,
     interface_id = None):
@@ -139,7 +143,7 @@ def db_get_unicast_topology_label(service_id,
     finally:
         topology_label_guard.read_unlock()
         session.close()
-def db_list_unicast_topology_labels(service_id = None, direction = None):
+def db_list_topology_labels(service_id = None, direction = None):
     session = db_sessions[DB_NAME]()
     try:
         session.begin()
@@ -158,7 +162,7 @@ def db_list_unicast_topology_labels(service_id = None, direction = None):
     finally:
         topology_label_guard.read_unlock()
         session.close()
-def db_delete_unicast_topology_label(uuid):
+def db_delete_topology_label(uuid):
     session = db_sessions[DB_NAME]()
     try:
         session.begin()
@@ -180,13 +184,17 @@ if __name__ == '__main__':
     from e3net.e3neta.db.db_topology_neighbor import register_topology_neighbor
     n = register_topology_neighbor('hello', 'world')
     print(n)
-    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.0')
-    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id+'1', n.id, LABEL_DIRECTION_INGRESS,'service.0')
-    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.1')
-    l = db_update_unicast_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_EGRESS,'service.0', 33)
+    l = db_update_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.0')
+    l = db_update_topology_label('customer.lan0',n.local_interface_id+'1', n.id, LABEL_DIRECTION_INGRESS,'service.0')
+    l = db_update_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.1')
+    l = db_update_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.1')
+    l = db_update_topology_label('customer.lan0',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS,'service.1', 332)
+    l = db_update_topology_label('DUMMY_MULTICAST_LANZONE',n.local_interface_id, n.id, LABEL_DIRECTION_INGRESS, 'service.0')
+    l = db_update_topology_label('DUMMY_MULTICAST_LANZONE',n.local_interface_id, n.id, LABEL_DIRECTION_EGRESS, 'service.0', 23)
+    l = db_update_topology_label('DUMMY_MULTICAST_LANZONE',n.local_interface_id, n.id, LABEL_DIRECTION_EGRESS, 'service.1', 2323)
     #l = register_topology_label('customer.lan2', n.id, LABEL_DIRECTION_INGRESS,'service.0')
-    labels = db_get_unicast_topology_label('service.0', 'customer.lan0', LABEL_DIRECTION_EGRESS, n.local_interface_id)
-    labels = db_list_unicast_topology_labels(direction = LABEL_DIRECTION_EGRESS)
+    #labels = db_get_topology_label('service.0', 'customer.lan0', LABEL_DIRECTION_EGRESS, n.local_interface_id)
+    labels = db_list_topology_labels()
     for l in labels:
-        #db_delete_unicast_topology_label(l.id)
+        #db_delete_topology_label(l.id)
         print(l)
