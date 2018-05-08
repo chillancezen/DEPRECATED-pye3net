@@ -27,11 +27,19 @@ from e3net.e3neta.e3neta_config import get_host_agent
 from e3net.rpc.grpc_client import get_stub
 from e3net.common.e3def import E3VSWITCH_LAN_ZONE_TYPE_BACKBONE
 from e3net.common.e3def import E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER
+from e3net.e3neta.db.db_topology_label import db_list_topology_labels
+from e3net.e3neta.db.db_topology_label import db_update_topology_label
+from e3net.e3neta.db.db_topology_label import db_get_topology_label
+from e3net.e3neta.db.db_topology_label import db_delete_topology_label
+from e3net.e3neta.db.db_ether_service import db_update_ether_service
+from e3net.e3neta.db.db_ether_service import db_list_ether_service
+from e3net.e3neta.db.db_ether_service import db_get_ether_service
+from e3net.e3neta.db.db_ether_service import db_delete_ether_service
 
 e3loger = get_e3loger('e3neta')
 
 
-def retrieve_topology_elements(service, iResult):
+def retrieve_topology_elements(service_id, iResult):
     agent = get_host_agent()
     topology_edge_stub = get_stub(agent.current_controller,
         agent.controller_port,
@@ -45,8 +53,8 @@ def retrieve_topology_elements(service, iResult):
     vswitch_host_stub = get_stub(agent.current_controller,
         agent.controller_port,
         vswitch_host_rpc_service)
-    e3loger.info('applying service: %s' % (service))
-    _edges = rpc_client_list_topology_edges_for_services(topology_edge_stub, [service])
+    e3loger.info('applying service: %s' % (service_id))
+    _edges = rpc_client_list_topology_edges_for_services(topology_edge_stub, [service_id])
     edges = {_edge.id : _edge for _edge in _edges}
     _iface_list = set()
     for _edge_id in edges:
@@ -69,7 +77,8 @@ def retrieve_topology_elements(service, iResult):
     iResult['interfaces'] = ifaces
     iResult['lanzones'] = lanzones
     iResult['hosts'] = hosts
-    iResult['service'] = service
+    iResult['service_id'] = service_id
+    iResult['service'] = db_update_ether_service(service_id)
 
 def resolve_rechability_information(iResult):
     edges = iResult['edges']
@@ -186,7 +195,23 @@ def resolve_rechability_information(iResult):
     iResult['interface_neighbor_mapping'] = interface_neighbor_mapping
     iResult['rechability_mapping'] = rechability_mapping
     iResult['host_interface_mappping'] = host_interface_mappping
- 
+
+def synchronize_topology_label(iResult):
+    interface_neighbor_mapping = iResult['interface_neighbor_mapping']
+    host_interface_mappping = iResult['host_interface_mappping']
+    rechability_mapping = iResult['rechability_mapping']
+    service_id = iResult['service_id']
+    service = iResult['service']
+    labels_in_vswitch = db_list_topology_labels(service_id)
+    print(db_get_ether_service(service_id))
+    print('cute:', service)
+    services = db_list_ether_service()
+    for s in services:
+        print(s)
+    db_delete_ether_service(service_id)
+    services = db_list_ether_service()
+    for s in services:
+        print(s)
 class ether_service_taskflow_prefetch_service_elements(task.Task):
     def execute(self, config, iResult):
         services = config['services']
@@ -194,7 +219,7 @@ class ether_service_taskflow_prefetch_service_elements(task.Task):
             _iResult = dict()
             retrieve_topology_elements(service, _iResult)
             resolve_rechability_information(_iResult)
-
+            synchronize_topology_label(_iResult)
 
 def generate_ether_service_apply_ops_taskflow():
     lf = linear_flow.Flow(ETHER_SERVICE_TASKFLOW_APPLIANCE)

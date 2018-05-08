@@ -36,7 +36,7 @@ class topology_label(DB_BASE):
     label_id = Column(Integer(), nullable = False)
     direction = Column(Enum(LABEL_DIRECTION_INGRESS,
         LABEL_DIRECTION_EGRESS),nullable = False)
-    service_id = Column(String(64), nullable = False)
+    service_id = Column(String(64), ForeignKey('agent_ether_service.id'), nullable = False)
     is_unicast = Column(Boolean(), nullable = False, default = True)
 
     def __str__(self):
@@ -194,7 +194,7 @@ if __name__ == '__main__':
     l = db_update_topology_label('DUMMY_MULTICAST_LANZONE',n.local_interface_id, n.id, LABEL_DIRECTION_EGRESS, 'service.1', 2323)
     #l = register_topology_label('customer.lan2', n.id, LABEL_DIRECTION_INGRESS,'service.0')
     #labels = db_get_topology_label('service.0', 'customer.lan0', LABEL_DIRECTION_EGRESS, n.local_interface_id)
-    labels = db_list_topology_labels()
+    labels = db_list_topology_labels(service_id = 'service.0')
     for l in labels:
         #db_delete_topology_label(l.id)
         print(l)
