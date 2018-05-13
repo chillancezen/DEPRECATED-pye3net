@@ -31,6 +31,10 @@ from e3net.e3neta.db.db_topology_label import db_list_topology_labels
 from e3net.e3neta.db.db_topology_label import db_update_topology_label
 from e3net.e3neta.db.db_topology_label import db_get_topology_label
 from e3net.e3neta.db.db_topology_label import db_delete_topology_label
+from e3net.e3neta.db.db_topology_label import LABEL_DIRECTION_INGRESS
+from e3net.e3neta.db.db_topology_label import DUMMY_MULTICAST_LANZONE
+from e3net.e3neta.db.db_topology_neighbor import register_topology_neighbor
+from e3net.e3neta.db.db_topology_neighbor import get_topology_neighbor_by_interfaces
 from e3net.e3neta.db.db_ether_service import db_update_ether_service
 from e3net.e3neta.db.db_ether_service import db_list_ether_service
 from e3net.e3neta.db.db_ether_service import db_get_ether_service
@@ -129,6 +133,10 @@ def resolve_rechability_information(iResult):
         _iface1_id = iface_lst[1]
         interface_neighbor_mapping[_iface0_id] = _iface1_id
         interface_neighbor_mapping[_iface1_id] = _iface0_id
+    for _iface_id in interface_neighbor_mapping:
+        _iface = interfaces[_iface_id]
+        if _iface.host_id == local_host_id:
+            register_topology_neighbor(_iface_id, interface_neighbor_mapping[_iface_id])
     #calculate the reachability information
     rechability_mapping = dict()
     used_edges = set()
@@ -191,27 +199,61 @@ def resolve_rechability_information(iResult):
         lanzone = lanzones[lanzone_id]
         if lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
             assert (rechability_mapping[lanzone_id] in interface_neighbor_mapping)
-        print(lanzone_id, 'via', rechability_mapping[lanzone_id])
     iResult['interface_neighbor_mapping'] = interface_neighbor_mapping
     iResult['rechability_mapping'] = rechability_mapping
     iResult['host_interface_mappping'] = host_interface_mappping
 
 def synchronize_topology_label(iResult):
+    agent = get_host_agent()
+    local_host_id = agent.vswitch_host.id
     interface_neighbor_mapping = iResult['interface_neighbor_mapping']
     host_interface_mappping = iResult['host_interface_mappping']
     rechability_mapping = iResult['rechability_mapping']
     service_id = iResult['service_id']
     service = iResult['service']
+    interfaces = iResult['interfaces']
+    lanzones = iResult['lanzones']
+    hosts = iResult['hosts']
+    edges = iResult['edges']
+    interfaces_in_topology = [iface for iface in interface_neighbor_mapping if \
+        interfaces[iface].host_id == local_host_id]
+    backbone_interfaces = list()
+    for _iface_id in interfaces_in_topology:
+        _iface = interfaces[_iface_id]
+        _lanzone_id = _iface.lanzone_id
+        _lanzone = lanzones[_lanzone_id]
+        if _lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER:
+            continue
+        backbone_interfaces.append(_iface_id)
     labels_in_vswitch = db_list_topology_labels(service_id)
-    print(db_get_ether_service(service_id))
-    print('cute:', service)
-    services = db_list_ether_service()
-    for s in services:
-        print(s)
-    db_delete_ether_service(service_id)
-    services = db_list_ether_service()
-    for s in services:
-        print(s)
+    labels_to_apply = dict()
+    for _lanzone_id in rechability_mapping:
+        _nexthop = rechability_mapping[_lanzone_id]
+        _lanzone = lanzones[_lanzone_id]
+        if _lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_BACKBONE:
+            continue
+        for _adjacent_iface_id in backbone_interfaces:
+            if _adjacent_iface_id == _nexthop:
+                continue
+            neighbor = get_topology_neighbor_by_interfaces(_adjacent_iface_id,
+                interface_neighbor_mapping[_adjacent_iface_id])
+            label = db_update_topology_label(customer_lanzone = _lanzone_id,
+                interface_id = _adjacent_iface_id,
+                neighbor_id = neighbor.id,
+                direction = LABEL_DIRECTION_INGRESS,
+                service_id = service_id)
+            labels_to_apply[label.id] = label
+    for _iface_id in backbone_interfaces:
+        neighbor = get_topology_neighbor_by_interfaces(_iface_id,
+            interface_neighbor_mapping[_iface_id])
+        label = db_update_topology_label(customer_lanzone = DUMMY_MULTICAST_LANZONE,
+            interface_id = _iface_id,
+            neighbor_id = neighbor.id,
+            direction = LABEL_DIRECTION_INGRESS,
+            service_id = service_id)
+        labels_to_apply[label.id] = label
+    for _label_id in labels_to_apply:
+        print(labels_to_apply[_label_id])
 class ether_service_taskflow_prefetch_service_elements(task.Task):
     def execute(self, config, iResult):
         services = config['services']
@@ -220,7 +262,6 @@ class ether_service_taskflow_prefetch_service_elements(task.Task):
             retrieve_topology_elements(service, _iResult)
             resolve_rechability_information(_iResult)
             synchronize_topology_label(_iResult)
-
 def generate_ether_service_apply_ops_taskflow():
     lf = linear_flow.Flow(ETHER_SERVICE_TASKFLOW_APPLIANCE)
     lf.add(ether_service_taskflow_prefetch_service_elements())

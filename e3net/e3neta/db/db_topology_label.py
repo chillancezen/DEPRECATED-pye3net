@@ -93,7 +93,7 @@ def db_update_topology_label(customer_lanzone,
             if _label.label_id == least_label_id:
                 least_label_id += 1
         if target_label:
-            #if a ingress is allocated, it will not change
+            #if an ingress is allocated, it will not change
             target_label.label_id = allocated_label_id if \
                 direction == LABEL_DIRECTION_EGRESS else \
                 target_label.label_id
@@ -106,9 +106,9 @@ def db_update_topology_label(customer_lanzone,
             target_label.neighbor_id = neighbor_id
             target_label.interface_id = interface_id
             target_label.direction = direction
-            target_label.is_unicast = True if \
+            target_label.is_unicast = False if \
                 customer_lanzone == DUMMY_MULTICAST_LANZONE else \
-                False
+                True
             target_label.label_id = allocated_label_id if \
                 direction == LABEL_DIRECTION_EGRESS else \
                 least_label_id
