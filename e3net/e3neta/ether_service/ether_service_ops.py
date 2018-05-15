@@ -252,8 +252,16 @@ def synchronize_topology_label(iResult):
             direction = LABEL_DIRECTION_INGRESS,
             service_id = service_id)
         labels_to_apply[label.id] = label
+    labels_to_add = dict()
+    labels_to_del = dict()
     for _label_id in labels_to_apply:
-        print(labels_to_apply[_label_id])
+        if _label_id not in [label.id for label in labels_in_vswitch]:
+            labels_to_add[_label_id] = labels_to_apply[_label_id]
+    for _label in labels_in_vswitch:
+        if _label.id not in list(labels_to_apply.keys()):
+            labels_to_del[_label.id] = _label
+    print('labels to add :', labels_to_add)
+    print('labels to del :', labels_to_del)
 class ether_service_taskflow_prefetch_service_elements(task.Task):
     def execute(self, config, iResult):
         services = config['services']
@@ -285,7 +293,7 @@ if __name__ == '__main__':
     e3neta_db_init()
     e3neta_agent_connect()
     spec = dict()
-    spec['services'] = ['3bfb6124-61e6-4698-b3ad-84f7e36da2ca']
+    spec['services'] = ['f666831e-7e02-4b12-a39f-f0bca96ef6ab']
     tf = e3standalone_taskflow(ETHER_SERVICE_TASKFLOW_APPLIANCE,
         sync = False,
         store = {'config' : spec, 'iResult' : dict()})

@@ -125,17 +125,19 @@ if __name__ == '__main__':
     add_config_file('/etc/e3net/e3vswitch.ini')
     load_configs()
     stub = get_stub('127.0.0.1', 9418, rpc_service)
-    rpc_client_taskflow_create_ether_service(stub,
+    if False: 
+        rpc_client_taskflow_create_ether_service(stub,
         service_name = 'ether_line_0',
         tenant_id = 'c2204787-df90-473b-8ed6-52838eab1c32',
         initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c',
             '2ddc6ac9-5216-4e25-8414-9e088c33a94f',
             'abe1b66e-7f34-4857-bdb8-ec27b76373a3'],
         service_type = E3NET_ETHER_SERVICE_TYPE_LAN,
-        is_synced = False)
-    rpc_client_taskflow_update_ether_lan_service(stub,'c29ac91f-5516-4d0c-b257-769bc4f71545',E_LAN_OPERATION_REMOVAL,initial_lanzones = ['2ddc6ac9-5216-4e25-8414-9e088c33a94f'], is_synced = False)
-    rpc_client_taskflow_update_ether_lan_service(stub,'c29ac91f-5516-4d0c-b257-769bc4f71545',E_LAN_OPERATION_ADDITION,initial_lanzones = ['2ddc6ac9-5216-4e25-8414-9e088c33a94f'], is_synced = False)
-    services =  rpc_client_list_ether_services(stub)
+        is_synced = True)
+    rpc_client_taskflow_update_ether_lan_service(stub,'f666831e-7e02-4b12-a39f-f0bca96ef6ab',E_LAN_OPERATION_REMOVAL,initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c'], is_synced = True)
+    rpc_client_taskflow_update_ether_lan_service(stub,'f666831e-7e02-4b12-a39f-f0bca96ef6ab',E_LAN_OPERATION_ADDITION,initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c'], is_synced = True)
+    #services =  rpc_client_list_ether_services(stub)
+    #print(services)
     #rpc_client_taskflow_delete_ether_service(stub, [e.id for e in services])
     #rpc_client_taskflow_delete_ether_service(stub, ['a3383c77-c5de-46f3-928a-60626196f36b'])
     sys.exit()

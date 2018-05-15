@@ -493,6 +493,7 @@ def _remove_lanzones_from_ether_lan(config, iResult):
     for _lanzone_id in iResult['initial_lanzones']:
         lanzone = lanzones[_lanzone_id]
         assert (lanzone.zone_type == E3VSWITCH_LAN_ZONE_TYPE_CUSTOMER)
+        #in case the lanzone which is to be deleted are not in the topology
         assert (_lanzone_id in permanent_lanzone_set)
     deleted_path=list()
     #remove those lanzones that are supposed to be trimmed
@@ -653,6 +654,7 @@ def _add_lanzones_to_ether_lan(config, iResult):
     unused_lanzone_set = set()
     _local_degree = dict()
     start_lanzone_id = None
+    lanzone_host_iface_mapping = dict()
     #recover the environment to remuse the algorithm
     for _edge_id in topology_edges:
         edge = topology_edges[_edge_id]
@@ -678,18 +680,24 @@ def _add_lanzones_to_ether_lan(config, iResult):
             edge = topology_edges[_edge_id]
             lanzone0_id = interfaces[edge.interface0].lanzone_id
             lanzone1_id = interfaces[edge.interface1].lanzone_id
+            host0_id = interfaces[edge.interface0].host_id
+            host1_id = interfaces[edge.interface1].host_id
+            if lanzone0_id not in lanzone_host_iface_mapping:
+                lanzone_host_iface_mapping[lanzone0_id] = dict()
+            if lanzone1_id not in lanzone_host_iface_mapping:
+                lanzone_host_iface_mapping[lanzone1_id] = dict()
+            lanzone_host_iface_mapping[lanzone0_id][host0_id] = edge.interface0
+            lanzone_host_iface_mapping[lanzone1_id][host1_id] = edge.interface1
             if lanzone0_id in permanent_lanzone_set and lanzone1_id in permanent_lanzone_set:
                 continue
             if lanzone0_id in permanent_lanzone_set:
-                host_id = interfaces[edge.interface0].host_id
                 permanent_lanzone_set[lanzone1_id] = (0, (edge.interface1,
-                                                          host_id,
+                                                          host0_id,
                                                           edge.interface0))
                 _should_terminate = False
             elif lanzone1_id in permanent_lanzone_set:
-                host_id = interfaces[edge.interface1].host_id
                 permanent_lanzone_set[lanzone0_id] = (0, (edge.interface0,
-                                                          host_id,
+                                                          host1_id,
                                                           edge.interface1))
                 _should_terminate = False
         if _should_terminate:
@@ -744,10 +752,13 @@ def _add_lanzones_to_ether_lan(config, iResult):
                         continue
                 if iface.host_id in iResult['ban_hosts']:
                     continue
+                if iface.lanzone_id in lanzone_host_iface_mapping and \
+                    iface.host_id in lanzone_host_iface_mapping[iface.lanzone_id] and \
+                    _iface_id != lanzone_host_iface_mapping[iface.lanzone_id][iface.host_id]:
+                    continue
                 if iface.host_id not in intermediate_host:
                     intermediate_host[iface.host_id] = _iface_id
-                elif iface_weight[_iface_id] < iface_weight[intermediate_host[iface.
-                                                                              host_id]]:
+                elif iface_weight[_iface_id] < iface_weight[intermediate_host[iface.host_id]]:
                     intermediate_host[iface.host_id] = _iface_id
             e3loger.debug('intermediate_host:%s' % (intermediate_host))
             #find the top half of the topology edge
@@ -766,6 +777,10 @@ def _add_lanzones_to_ether_lan(config, iResult):
                     else:
                         if iface.interface_type != E3VSWITCH_INTERFACE_TYPE_SHARED:
                             continue
+                    if iface.lanzone_id in lanzone_host_iface_mapping and \
+                        iface.host_id in lanzone_host_iface_mapping[iface.lanzone_id] and \
+                        _iface_id != lanzone_host_iface_mapping[iface.lanzone_id][iface.host_id]:
+                        continue
                     if iface.lanzone_id not in intermediate_lanzone:
                         intermediate_lanzone[iface.lanzone_id] = (
                             _iface_id, _host_id, intermediate_host[_host_id])
@@ -815,6 +830,12 @@ def _add_lanzones_to_ether_lan(config, iResult):
                                                    (_next_iface0_id,
                                                     _next_host_id,
                                                     _next_iface1_id))
+        if interfaces[_next_iface0_id].lanzone_id not in lanzone_host_iface_mapping:
+            lanzone_host_iface_mapping[interfaces[_next_iface0_id].lanzone_id] = dict()
+        if interfaces[_next_iface1_id].lanzone_id not in lanzone_host_iface_mapping:
+            lanzone_host_iface_mapping[interfaces[_next_iface1_id].lanzone_id] = dict()
+        lanzone_host_iface_mapping[interfaces[_next_iface0_id].lanzone_id][interfaces[_next_iface0_id].host_id] = _next_iface0_id
+        lanzone_host_iface_mapping[interfaces[_next_iface1_id].lanzone_id][interfaces[_next_iface1_id].host_id] = _next_iface1_id
         temporary_lanzone_set.remove(_next_lanzone_id)
         e3loger.debug('add topology %s:%s' %
                       (_next_lanzone_id,
