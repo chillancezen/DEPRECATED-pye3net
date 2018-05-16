@@ -60,22 +60,30 @@ def retrieve_topology_elements(service_id, iResult):
     e3loger.info('applying service: %s' % (service_id))
     _edges = rpc_client_list_topology_edges_for_services(topology_edge_stub, [service_id])
     edges = {_edge.id : _edge for _edge in _edges}
+
     _iface_list = set()
+    _ifaces = list()
     for _edge_id in edges:
         _edge = edges[_edge_id]
         _iface_list.add(_edge.interface0)
         _iface_list.add(_edge.interface1)
-    _ifaces = rpc_client_list_vswitch_interfaces(vswitch_interface_stub, _iface_list)
+    if len(_iface_list):
+        _ifaces = rpc_client_list_vswitch_interfaces(vswitch_interface_stub, _iface_list)
     ifaces = {_iface.id : _iface for _iface in _ifaces}
+
     _lanzone_list = set()
     _host_list = set()
+    _lanzones = list()
+    _hosts = list()
     for _iface_id in ifaces:
         _iface = ifaces[_iface_id]
         _lanzone_list.add(_iface.lanzone_id)
         _host_list.add(_iface.host_id)
-    _lanzones = rpc_client_list_vswitch_lanzones(vswitch_lanzone_stub, uuid_list = _lanzone_list)
+    if len(_lanzone_list):
+        _lanzones = rpc_client_list_vswitch_lanzones(vswitch_lanzone_stub, uuid_list = _lanzone_list)
     lanzones = {_lanzone.id : _lanzone for _lanzone in _lanzones}
-    _hosts = rpc_client_list_vswitch_hosts(vswitch_host_stub, uuid_list = _host_list)
+    if len(_host_list):
+        _hosts = rpc_client_list_vswitch_hosts(vswitch_host_stub, uuid_list = _host_list)
     hosts = {_host.id : _host for _host in _hosts}
     iResult['edges'] = edges
     iResult['interfaces'] = ifaces
@@ -203,6 +211,11 @@ def resolve_rechability_information(iResult):
     iResult['rechability_mapping'] = rechability_mapping
     iResult['host_interface_mappping'] = host_interface_mappping
 
+def process_null_topology(iResult):
+    iResult['interface_neighbor_mapping'] = dict()
+    iResult['host_interface_mappping'] = dict()
+    iResult['rechability_mapping'] = dict()
+
 def synchronize_topology_label(iResult):
     agent = get_host_agent()
     local_host_id = agent.vswitch_host.id
@@ -268,7 +281,10 @@ class ether_service_taskflow_prefetch_service_elements(task.Task):
         for service in services:
             _iResult = dict()
             retrieve_topology_elements(service, _iResult)
-            resolve_rechability_information(_iResult)
+            if len(_iResult['edges']):
+                resolve_rechability_information(_iResult)
+            else:
+                process_null_topology(_iResult)
             synchronize_topology_label(_iResult)
 def generate_ether_service_apply_ops_taskflow():
     lf = linear_flow.Flow(ETHER_SERVICE_TASKFLOW_APPLIANCE)

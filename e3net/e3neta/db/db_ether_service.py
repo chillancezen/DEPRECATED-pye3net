@@ -69,15 +69,16 @@ def db_update_ether_service(service_id):
     ether_service_stub = get_stub(agent.current_controller,
         agent.controller_port,
         ether_service_rpc_service)
-    shadow_service = rpc_client_get_ether_service(ether_service_stub, service_id)
     session = db_sessions[DB_NAME]()
     try:
         ether_service_guard.write_lock()
         session.begin()
         local_service = session.query(agent_ether_service).filter(
             agent_ether_service.id == service_id).first()
-        if not local_service:
-            local_service = agent_ether_service()
+        if local_service:
+            return local_service.clone()
+        local_service = agent_ether_service()
+        shadow_service = rpc_client_get_ether_service(ether_service_stub, service_id)
         local_service.id = shadow_service.id
         local_service.name = shadow_service.name
         local_service.service_type = shadow_service.service_type
