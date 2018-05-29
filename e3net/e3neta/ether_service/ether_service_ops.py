@@ -309,7 +309,7 @@ if __name__ == '__main__':
     e3neta_db_init()
     e3neta_agent_connect()
     spec = dict()
-    spec['services'] = ['f666831e-7e02-4b12-a39f-f0bca96ef6ab']
+    spec['services'] = ['c642f944-1a73-4152-af1d-98f455e5c092']
     tf = e3standalone_taskflow(ETHER_SERVICE_TASKFLOW_APPLIANCE,
         sync = False,
         store = {'config' : spec, 'iResult' : dict()})

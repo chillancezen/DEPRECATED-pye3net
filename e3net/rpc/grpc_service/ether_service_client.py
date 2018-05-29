@@ -134,9 +134,9 @@ if __name__ == '__main__':
             'abe1b66e-7f34-4857-bdb8-ec27b76373a3'],
         service_type = E3NET_ETHER_SERVICE_TYPE_LAN,
         is_synced = True)
-    rpc_client_taskflow_delete_ether_service(stub, ['f666831e-7e02-4b12-a39f-f0bca96ef6ab'], is_synced = True)
-    #rpc_client_taskflow_update_ether_lan_service(stub,'f666831e-7e02-4b12-a39f-f0bca96ef6ab',E_LAN_OPERATION_REMOVAL,initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c'], is_synced = True)
-    #rpc_client_taskflow_update_ether_lan_service(stub,'f666831e-7e02-4b12-a39f-f0bca96ef6ab',E_LAN_OPERATION_ADDITION,initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c'], is_synced = True)
+    #rpc_client_taskflow_delete_ether_service(stub, ['f666831e-7e02-4b12-a39f-f0bca96ef6ab'], is_synced = True)
+    rpc_client_taskflow_update_ether_lan_service(stub,'c642f944-1a73-4152-af1d-98f455e5c092',E_LAN_OPERATION_REMOVAL,initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c'], is_synced = True)
+    #rpc_client_taskflow_update_ether_lan_service(stub,'c642f944-1a73-4152-af1d-98f455e5c092',E_LAN_OPERATION_ADDITION,initial_lanzones = ['1bcd32a0-444d-41cb-a3fd-786f6f3ef83c'], is_synced = True)
     #services =  rpc_client_list_ether_services(stub)
     #print(services)
     #rpc_client_taskflow_delete_ether_service(stub, [e.id for e in services])

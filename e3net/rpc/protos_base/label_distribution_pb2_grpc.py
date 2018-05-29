@@ -17,18 +17,18 @@ class label_distributionStub(object):
     """
     self.rpc_deposit_labels = channel.stream_unary(
         '/label_distribution/rpc_deposit_labels',
-        request_serializer=label__distribution__pb2.label.SerializeToString,
+        request_serializer=label__distribution__pb2.label_request.SerializeToString,
         response_deserializer=common__pb2.null.FromString,
         )
     self.rpc_withdraw_labels = channel.stream_unary(
         '/label_distribution/rpc_withdraw_labels',
-        request_serializer=label__distribution__pb2.label.SerializeToString,
+        request_serializer=label__distribution__pb2.label_request.SerializeToString,
         response_deserializer=common__pb2.null.FromString,
         )
     self.rpc_pull_labels = channel.stream_stream(
         '/label_distribution/rpc_pull_labels',
-        request_serializer=label__distribution__pb2.label.SerializeToString,
-        response_deserializer=label__distribution__pb2.label.FromString,
+        request_serializer=label__distribution__pb2.label_request.SerializeToString,
+        response_deserializer=label__distribution__pb2.label_response.FromString,
         )
 
 
@@ -62,18 +62,18 @@ def add_label_distributionServicer_to_server(servicer, server):
   rpc_method_handlers = {
       'rpc_deposit_labels': grpc.stream_unary_rpc_method_handler(
           servicer.rpc_deposit_labels,
-          request_deserializer=label__distribution__pb2.label.FromString,
+          request_deserializer=label__distribution__pb2.label_request.FromString,
           response_serializer=common__pb2.null.SerializeToString,
       ),
       'rpc_withdraw_labels': grpc.stream_unary_rpc_method_handler(
           servicer.rpc_withdraw_labels,
-          request_deserializer=label__distribution__pb2.label.FromString,
+          request_deserializer=label__distribution__pb2.label_request.FromString,
           response_serializer=common__pb2.null.SerializeToString,
       ),
       'rpc_pull_labels': grpc.stream_stream_rpc_method_handler(
           servicer.rpc_pull_labels,
-          request_deserializer=label__distribution__pb2.label.FromString,
-          response_serializer=label__distribution__pb2.label.SerializeToString,
+          request_deserializer=label__distribution__pb2.label_request.FromString,
+          response_serializer=label__distribution__pb2.label_response.SerializeToString,
       ),
   }
   generic_handler = grpc.method_handlers_generic_handler(

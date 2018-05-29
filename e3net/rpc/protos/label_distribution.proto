@@ -2,14 +2,21 @@ syntax = "proto3";
 import 'common.proto';
 
 service label_distribution {
-    rpc rpc_deposit_labels(stream label) returns (null) {}
-    rpc rpc_withdraw_labels(stream label) returns (null) {}
-    rpc rpc_pull_labels(stream label) returns (stream label) {}
+    rpc rpc_deposit_labels(stream label_request) returns (null) {}
+    rpc rpc_withdraw_labels(stream label_request) returns (null) {}
+    rpc rpc_pull_labels(stream label_request) returns (stream label_response) {}
 }
 
-message label {
-    int32 label_id = 1;
-    bool is_unicast = 2;
-    string service_id = 3;
-    string lanzone_id = 4;
+message label_request {
+    string service_id = 1;
+    string customer_lanzone = 2;
+    string ingress_interface_id = 3;
 }
+message label_response {
+    int32 label_id = 1;
+    string service_id = 2;
+    string customer_lanzone = 3;
+    string ingress_interface_id  = 4;
+    bool present = 5;
+}
+

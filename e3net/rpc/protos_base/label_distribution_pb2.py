@@ -20,44 +20,37 @@ DESCRIPTOR = _descriptor.FileDescriptor(
   name='label_distribution.proto',
   package='',
   syntax='proto3',
-  serialized_pb=_b('\n\x18label_distribution.proto\x1a\x0c\x63ommon.proto\"U\n\x05label\x12\x10\n\x08label_id\x18\x01 \x01(\x05\x12\x12\n\nis_unicast\x18\x02 \x01(\x08\x12\x12\n\nservice_id\x18\x03 \x01(\t\x12\x12\n\nlanzone_id\x18\x04 \x01(\t2\x90\x01\n\x12label_distribution\x12\'\n\x12rpc_deposit_labels\x12\x06.label\x1a\x05.null\"\x00(\x01\x12(\n\x13rpc_withdraw_labels\x12\x06.label\x1a\x05.null\"\x00(\x01\x12\'\n\x0frpc_pull_labels\x12\x06.label\x1a\x06.label\"\x00(\x01\x30\x01\x62\x06proto3')
+  serialized_pb=_b('\n\x18label_distribution.proto\x1a\x0c\x63ommon.proto\"[\n\rlabel_request\x12\x12\n\nservice_id\x18\x01 \x01(\t\x12\x18\n\x10\x63ustomer_lanzone\x18\x02 \x01(\t\x12\x1c\n\x14ingress_interface_id\x18\x03 \x01(\t\"\x7f\n\x0elabel_response\x12\x10\n\x08label_id\x18\x01 \x01(\x05\x12\x12\n\nservice_id\x18\x02 \x01(\t\x12\x18\n\x10\x63ustomer_lanzone\x18\x03 \x01(\t\x12\x1c\n\x14ingress_interface_id\x18\x04 \x01(\t\x12\x0f\n\x07present\x18\x05 \x01(\x08\x32\xb1\x01\n\x12label_distribution\x12/\n\x12rpc_deposit_labels\x12\x0e.label_request\x1a\x05.null\"\x00(\x01\x12\x30\n\x13rpc_withdraw_labels\x12\x0e.label_request\x1a\x05.null\"\x00(\x01\x12\x38\n\x0frpc_pull_labels\x12\x0e.label_request\x1a\x0f.label_response\"\x00(\x01\x30\x01\x62\x06proto3')
   ,
   dependencies=[common__pb2.DESCRIPTOR,])
 
 
 
 
-_LABEL = _descriptor.Descriptor(
-  name='label',
-  full_name='label',
+_LABEL_REQUEST = _descriptor.Descriptor(
+  name='label_request',
+  full_name='label_request',
   filename=None,
   file=DESCRIPTOR,
   containing_type=None,
   fields=[
     _descriptor.FieldDescriptor(
-      name='label_id', full_name='label.label_id', index=0,
-      number=1, type=5, cpp_type=1, label=1,
-      has_default_value=False, default_value=0,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='is_unicast', full_name='label.is_unicast', index=1,
-      number=2, type=8, cpp_type=7, label=1,
-      has_default_value=False, default_value=False,
-      message_type=None, enum_type=None, containing_type=None,
-      is_extension=False, extension_scope=None,
-      options=None, file=DESCRIPTOR),
-    _descriptor.FieldDescriptor(
-      name='service_id', full_name='label.service_id', index=2,
-      number=3, type=9, cpp_type=9, label=1,
+      name='service_id', full_name='label_request.service_id', index=0,
+      number=1, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
       options=None, file=DESCRIPTOR),
     _descriptor.FieldDescriptor(
-      name='lanzone_id', full_name='label.lanzone_id', index=3,
-      number=4, type=9, cpp_type=9, label=1,
+      name='customer_lanzone', full_name='label_request.customer_lanzone', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='ingress_interface_id', full_name='label_request.ingress_interface_id', index=2,
+      number=3, type=9, cpp_type=9, label=1,
       has_default_value=False, default_value=_b("").decode('utf-8'),
       message_type=None, enum_type=None, containing_type=None,
       is_extension=False, extension_scope=None,
@@ -75,18 +68,85 @@ _LABEL = _descriptor.Descriptor(
   oneofs=[
   ],
   serialized_start=42,
-  serialized_end=127,
+  serialized_end=133,
 )
 
-DESCRIPTOR.message_types_by_name['label'] = _LABEL
+
+_LABEL_RESPONSE = _descriptor.Descriptor(
+  name='label_response',
+  full_name='label_response',
+  filename=None,
+  file=DESCRIPTOR,
+  containing_type=None,
+  fields=[
+    _descriptor.FieldDescriptor(
+      name='label_id', full_name='label_response.label_id', index=0,
+      number=1, type=5, cpp_type=1, label=1,
+      has_default_value=False, default_value=0,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='service_id', full_name='label_response.service_id', index=1,
+      number=2, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='customer_lanzone', full_name='label_response.customer_lanzone', index=2,
+      number=3, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='ingress_interface_id', full_name='label_response.ingress_interface_id', index=3,
+      number=4, type=9, cpp_type=9, label=1,
+      has_default_value=False, default_value=_b("").decode('utf-8'),
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+    _descriptor.FieldDescriptor(
+      name='present', full_name='label_response.present', index=4,
+      number=5, type=8, cpp_type=7, label=1,
+      has_default_value=False, default_value=False,
+      message_type=None, enum_type=None, containing_type=None,
+      is_extension=False, extension_scope=None,
+      options=None, file=DESCRIPTOR),
+  ],
+  extensions=[
+  ],
+  nested_types=[],
+  enum_types=[
+  ],
+  options=None,
+  is_extendable=False,
+  syntax='proto3',
+  extension_ranges=[],
+  oneofs=[
+  ],
+  serialized_start=135,
+  serialized_end=262,
+)
+
+DESCRIPTOR.message_types_by_name['label_request'] = _LABEL_REQUEST
+DESCRIPTOR.message_types_by_name['label_response'] = _LABEL_RESPONSE
 _sym_db.RegisterFileDescriptor(DESCRIPTOR)
 
-label = _reflection.GeneratedProtocolMessageType('label', (_message.Message,), dict(
-  DESCRIPTOR = _LABEL,
+label_request = _reflection.GeneratedProtocolMessageType('label_request', (_message.Message,), dict(
+  DESCRIPTOR = _LABEL_REQUEST,
   __module__ = 'label_distribution_pb2'
-  # @@protoc_insertion_point(class_scope:label)
+  # @@protoc_insertion_point(class_scope:label_request)
   ))
-_sym_db.RegisterMessage(label)
+_sym_db.RegisterMessage(label_request)
+
+label_response = _reflection.GeneratedProtocolMessageType('label_response', (_message.Message,), dict(
+  DESCRIPTOR = _LABEL_RESPONSE,
+  __module__ = 'label_distribution_pb2'
+  # @@protoc_insertion_point(class_scope:label_response)
+  ))
+_sym_db.RegisterMessage(label_response)
 
 
 
@@ -96,15 +156,15 @@ _LABEL_DISTRIBUTION = _descriptor.ServiceDescriptor(
   file=DESCRIPTOR,
   index=0,
   options=None,
-  serialized_start=130,
-  serialized_end=274,
+  serialized_start=265,
+  serialized_end=442,
   methods=[
   _descriptor.MethodDescriptor(
     name='rpc_deposit_labels',
     full_name='label_distribution.rpc_deposit_labels',
     index=0,
     containing_service=None,
-    input_type=_LABEL,
+    input_type=_LABEL_REQUEST,
     output_type=common__pb2._NULL,
     options=None,
   ),
@@ -113,7 +173,7 @@ _LABEL_DISTRIBUTION = _descriptor.ServiceDescriptor(
     full_name='label_distribution.rpc_withdraw_labels',
     index=1,
     containing_service=None,
-    input_type=_LABEL,
+    input_type=_LABEL_REQUEST,
     output_type=common__pb2._NULL,
     options=None,
   ),
@@ -122,8 +182,8 @@ _LABEL_DISTRIBUTION = _descriptor.ServiceDescriptor(
     full_name='label_distribution.rpc_pull_labels',
     index=2,
     containing_service=None,
-    input_type=_LABEL,
-    output_type=_LABEL,
+    input_type=_LABEL_REQUEST,
+    output_type=_LABEL_RESPONSE,
     options=None,
   ),
 ])
